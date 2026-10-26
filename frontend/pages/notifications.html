@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notifications — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/notifications.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-title">
+      <h1>Notifications</h1>
+      <div class="row">
+        <label class="row small"><input type="checkbox" id="unread-only" class="checkbox"> Non lues uniquement</label>
+        <button type="button" id="read-all">Tout marquer comme lu</button>
+      </div>
+    </div>
+    <div id="message" aria-live="polite"></div>
+    <ul class="post-list" id="notifications"></ul>
+    <nav class="pagination" id="pagination" aria-label="Pagination"></nav>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

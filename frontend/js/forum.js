@@ -45,7 +45,7 @@ function renderPost(post) {
       "div",
       { class: "meta" },
       post.category ? el("span", { class: "tag" }, post.category) : null,
-      el("span", {}, `par ${post.author}`),
+      el("span", {}, "par ", el("a", { href: `/pages/profile.html?id=${post.author_id}` }, post.author)),
       el("span", {}, formatDate(post.created_at)),
       el("span", {}, plural(post.likes, "j'aime", "j'aime")),
       el("span", {}, plural(post.comments, "commentaire", "commentaires"))

@@ -64,7 +64,7 @@ function renderPost(post) {
         "div",
         { class: "meta" },
         post.category ? el("span", { class: "tag" }, post.category) : null,
-        el("span", {}, `par ${post.author}`),
+        el("span", {}, "par ", el("a", { href: `/pages/profile.html?id=${post.author_id}` }, post.author)),
         el("span", {}, formatDate(post.created_at)),
         edited ? el("span", {}, `(modifié le ${formatDate(post.updated_at)})`) : null
       ),
@@ -180,7 +180,7 @@ function renderComment(comment, children) {
   const item = el(
     "li",
     { class: "comment", id: `comment-${comment.id}` },
-    el("div", { class: "meta" }, el("strong", {}, comment.username), el("span", {}, formatDate(comment.created_at))),
+    el("div", { class: "meta" }, el("a", { href: `/pages/profile.html?id=${comment.author_id}` }, el("strong", {}, comment.username)), el("span", {}, formatDate(comment.created_at))),
     body,
     actions
   );

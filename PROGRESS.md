@@ -19,15 +19,15 @@ Dernière mise à jour : 2026-10-26
 | 3 | Fichiers et messagerie : types limités, fichiers privés, pagination | ✅ Terminé |
 | 4 | Notifications, signalements, modération | ✅ Terminé |
 | 5 | Durcissement : CORS, en-têtes, journaux | ✅ Terminé |
-| 5b | Découpage de `server.js` | ⏳ Prochaine |
-| 6 | Frontend (6 pages) | À faire |
+| 5b | Découpage de `server.js` | ✅ Terminé |
+| 6 | Frontend (6 pages) | ⏳ Prochaine |
 | 7 | Documentation : endpoints, installation, sauvegarde, déploiement | À faire |
 
 ## Tests automatisés
 
 `cd backend && npm test` — 53 tests, 9 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, fichiers/messagerie, modération/signalements/notifications, sécurité, CORS).
 
-Dernier résultat (2026-10-26, après tâche 5) : **53 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-26, après tâche 5b) : **53 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -43,7 +43,7 @@ Dernier résultat (2026-10-26, après tâche 5) : **53 réussis, 0 échec**. Con
 ## Fichiers importants
 
 - `database/database.sql` : seule source du schéma.
-- `backend/server.js` : toute l'API.
+- `backend/server.js` : démarrage ; `backend/src/` : application découpée (voir `ARCHITECTURE.md`).
 - `backend/scripts/db-init.js` : création des tables.
 
 ## Problèmes connus
@@ -54,4 +54,4 @@ Dernier résultat (2026-10-26, après tâche 5) : **53 réussis, 0 échec**. Con
 
 ## Prochaine action
 
-Tâche 5b : découper `server.js` selon `ARCHITECTURE.md` sans changer le comportement (les 53 tests doivent rester verts).
+Tâche 6 : frontend HTML/CSS/JS servi par Express, en commençant par `api.js`, connexion/inscription et forum.

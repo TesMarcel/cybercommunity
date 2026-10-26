@@ -1,109 +1,75 @@
-cyber-community/
+# Architecture
+
+```text
+cybercommunity/
 │
 ├── README.md
+├── ARCHITECTURE.md
+├── PROGRESS.md              suivi du projet
 ├── .gitignore
 │
 ├── database/
-│   ├── database.sql
-│   ├── seed.sql
-│   └── migrations/
+│   └── database.sql         seule source du schéma (npm run db:init)
 │
 ├── backend/
-│   │
 │   ├── package.json
-│   ├── .env
 │   ├── .env.example
-│   ├── server.js
+│   ├── server.js            point d'entrée : configuration + démarrage
+│   │
+│   ├── scripts/
+│   │   └── db-init.js       crée les tables à partir de database.sql
 │   │
 │   ├── src/
-│   │   ├── app.js
+│   │   ├── app.js           middlewares communs, montage des routes, erreurs
 │   │   │
 │   │   ├── config/
-│   │   │   ├── database.js
-│   │   │   └── env.js
+│   │   │   ├── env.js       variables obligatoires (.env)
+│   │   │   └── database.js  connexion PostgreSQL
 │   │   │
-│   │   ├── routes/
-│   │   │   ├── auth.routes.js
-│   │   │   ├── users.routes.js
-│   │   │   ├── profiles.routes.js
-│   │   │   ├── posts.routes.js
-│   │   │   ├── comments.routes.js
-│   │   │   ├── groups.routes.js
-│   │   │   ├── messages.routes.js
-│   │   │   ├── reports.routes.js
+│   │   ├── routes/          une route = validation + logique + requêtes SQL
+│   │   │   ├── auth.routes.js           inscription, connexion, mot de passe
+│   │   │   ├── users.routes.js          utilisateurs, profils, photo
+│   │   │   ├── categories.routes.js
+│   │   │   ├── posts.routes.js          discussions, commentaires, likes
+│   │   │   ├── groups.routes.js         groupes, membres, discussions de groupe
+│   │   │   ├── messages.routes.js       messages de groupe
+│   │   │   ├── files.routes.js          pièces jointes
+│   │   │   ├── reports.routes.js        signalements
+│   │   │   ├── moderation.routes.js     suspension, rôles
 │   │   │   └── notifications.routes.js
 │   │   │
-│   │   ├── controllers/
-│   │   │   ├── auth.controller.js
-│   │   │   ├── users.controller.js
-│   │   │   ├── profiles.controller.js
-│   │   │   ├── posts.controller.js
-│   │   │   ├── comments.controller.js
-│   │   │   ├── groups.controller.js
-│   │   │   ├── messages.controller.js
-│   │   │   ├── reports.controller.js
-│   │   │   └── notifications.controller.js
-│   │   │
 │   │   ├── services/
-│   │   │   ├── auth.service.js
-│   │   │   ├── user.service.js
-│   │   │   ├── post.service.js
-│   │   │   ├── group.service.js
-│   │   │   ├── message.service.js
+│   │   │   ├── group.service.js         droits sur les groupes
 │   │   │   └── notification.service.js
 │   │   │
-│   │   ├── models/
-│   │   │   ├── user.model.js
-│   │   │   ├── post.model.js
-│   │   │   ├── comment.model.js
-│   │   │   ├── group.model.js
-│   │   │   └── message.model.js
-│   │   │
 │   │   ├── middlewares/
-│   │   │   ├── auth.middleware.js
-│   │   │   ├── role.middleware.js
-│   │   │   ├── validation.middleware.js
-│   │   │   ├── rateLimit.middleware.js
-│   │   │   └── error.middleware.js
+│   │   │   ├── auth.middleware.js       JWT, rôles
+│   │   │   ├── rateLimit.middleware.js  anti brute-force
+│   │   │   ├── upload.middleware.js     réception des fichiers
+│   │   │   └── error.middleware.js      404 et erreurs
 │   │   │
 │   │   └── utils/
 │   │       ├── jwt.js
 │   │       ├── password.js
-│   │       ├── logger.js
-│   │       └── validators.js
+│   │       ├── validators.js
+│   │       └── files.js                 stockage des fichiers
 │   │
-│   ├── uploads/
-│   │   ├── images/
-│   │   └── files/
+│   ├── uploads/             créé au démarrage, ignoré par git
+│   │   ├── images/          photos de profil (publiques)
+│   │   └── files/           pièces jointes (privées, via GET /api/files/:id)
 │   │
-│   └── tests/
+│   └── test/                npm test (node:test)
 │
-└── frontend/
-    │
+└── frontend/                à réaliser (HTML / CSS / JavaScript)
     ├── index.html
-    ├── pages/
-    │   ├── login.html
-    │   ├── register.html
-    │   ├── profile.html
-    │   ├── forum.html
-    │   ├── groups.html
-    │   └── notifications.html
-    │
+    ├── pages/               login, register, profile, forum, groups, notifications
     ├── css/
-    │   ├── main.css
-    │   ├── auth.css
-    │   ├── forum.css
-    │   └── groups.css
-    │
-    ├── js/
-    │   ├── api.js
-    │   ├── auth.js
-    │   ├── profile.js
-    │   ├── forum.js
-    │   ├── groups.js
-    │   ├── messages.js
-    │   └── notifications.js
-    │
+    ├── js/                  api.js + un fichier par page
     └── assets/
-        ├── images/
-        └── icons/
+```
+
+## Choix par rapport au plan initial
+
+- **Pas de couches controllers / models séparées** : chaque route contient sa validation, sa logique et ses requêtes SQL paramétrées. Pour une API de cette taille, cela évite de multiplier les fichiers sans bénéfice. Les règles partagées (droits sur les groupes, notifications, validations) sont isolées dans `services/` et `utils/`.
+- **Profils et commentaires** sont regroupés avec les utilisateurs et les discussions (`users.routes.js`, `posts.routes.js`).
+- **Pas de dossier `migrations/`** : le schéma est dans `database/database.sql`. Une modification du schéma devra passer par un script de migration dédié.

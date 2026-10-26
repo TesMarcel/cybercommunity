@@ -10,7 +10,8 @@
     "db:init": "node scripts/db-init.js",
     "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
     "test:e2e": "node test-e2e/run.mjs",
-    "backup": "bash scripts/backup.sh"
+    "backup": "bash scripts/backup.sh",
+    "make-admin": "node scripts/make-admin.js"
   },
   "engines": {
     "node": ">=18"

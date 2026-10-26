@@ -796,10 +796,10 @@ npm start          # ou : npm run dev (redémarrage automatique)
 
 Ouvrir ensuite **http://localhost:5000** dans le navigateur : le serveur fournit à la fois l'application (dossier `frontend/`) et l'API (`/api/...`).
 
-Pour donner le rôle administrateur au premier compte créé :
+Pour donner le rôle administrateur au premier compte créé (depuis le dossier `backend`) :
 
 ```bash
-sudo -iu postgres psql -d cyber_community -c "UPDATE users SET role = 'ADMIN' WHERE username = 'VOTRE_NOM';"
+npm run make-admin -- VOTRE_NOM
 ```
 
 Le serveur refuse de démarrer si `JWT_SECRET` (32 caractères minimum) ou `DATABASE_URL` sont absents.

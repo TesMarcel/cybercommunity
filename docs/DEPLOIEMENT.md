@@ -112,7 +112,7 @@ Le port 5000 ne doit pas être accessible depuis Internet (pare-feu : ouvrir seu
 Créer son compte depuis le site, puis :
 
 ```bash
-sudo -iu postgres psql -d cyber_community -c "UPDATE users SET role = 'ADMIN' WHERE username = 'VOTRE_NOM';"
+sudo -iu cybercom bash -c 'cd /opt/cybercommunity/app/backend && npm run make-admin -- VOTRE_NOM'
 ```
 
 ## 7. Vérifications après déploiement

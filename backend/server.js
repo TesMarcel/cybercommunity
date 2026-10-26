@@ -60,15 +60,20 @@ const pool = new Pool({
 
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
 
+// Photos de profil : publiques
 const imagesDir = path.join(uploadDir, "images");
 
+// Pièces jointes : privées, servies uniquement par GET /api/files/:id
+const filesDir = path.join(uploadDir, "files");
+
 fs.mkdirSync(imagesDir, { recursive: true });
+fs.mkdirSync(filesDir, { recursive: true });
 
 // nosniff : le navigateur ne devine pas le type d'un fichier
 // (un faux .png contenant du HTML ne sera pas exécuté)
 app.use(
-  "/uploads",
-  express.static(uploadDir, {
+  "/uploads/images",
+  express.static(imagesDir, {
     setHeaders: (res) => {
       res.set("X-Content-Type-Options", "nosniff");
     },
@@ -79,28 +84,113 @@ app.use(
    MULTER
 ========================================================= */
 
+// Extensions acceptées pour les pièces jointes (pas d'exécutables,
+// ni de HTML/SVG/JS). Les fichiers sont de toute façon téléchargés,
+// jamais affichés par le navigateur.
+const ALLOWED_EXTENSIONS = new Set([
+  ".pdf", ".txt", ".md", ".csv", ".log", ".json",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp",
+  ".zip", ".gz", ".tar", ".7z",
+  ".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp",
+  ".pcap", ".pcapng",
+]);
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, filesDir);
   },
 
+  // Nom aléatoire sans extension : le nom d'origine reste en base
   filename: function (req, file, cb) {
-    const uniqueName =
-      Date.now() +
-      "-" +
-      Math.round(Math.random() * 1e9) +
-      path.extname(file.originalname);
-
-    cb(null, uniqueName);
+    cb(null, crypto.randomBytes(16).toString("hex"));
   },
 });
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: 25 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: function (req, file, cb) {
+    const extension = path.extname(file.originalname).toLowerCase();
+
+    if (!ALLOWED_EXTENSIONS.has(extension)) {
+      req.fileRejected = true;
+      return cb(null, false);
+    }
+
+    cb(null, true);
   },
 });
+
+// Supprime le fichier reçu si la requête échoue après l'envoi
+async function discardUpload(req) {
+  if (req.file) {
+    await fs.promises.unlink(req.file.path).catch(() => {});
+  }
+}
+
+// Supprime des pièces jointes (base + disque) à partir de leurs URL /api/files/:id
+async function deleteAttachments(urls) {
+  const ids = urls
+    .map((url) => /^\/api\/files\/(\d+)$/.exec(url ?? "")?.[1])
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    return;
+  }
+
+  const deleted = await pool.query(
+    `
+    DELETE FROM files
+    WHERE id = ANY($1::bigint[])
+    RETURNING stored_name
+    `,
+    [ids]
+  );
+
+  for (const file of deleted.rows) {
+    await fs.promises
+      .unlink(path.join(filesDir, path.basename(file.stored_name)))
+      .catch(() => {});
+  }
+}
+
+// Enregistre le fichier reçu dans la table files ; renvoie la ligne créée
+async function saveUploadedFile(file, uploaderId) {
+  const next = await pool.query(
+    "SELECT nextval(pg_get_serial_sequence('files', 'id')) AS id"
+  );
+
+  const id = next.rows[0].id;
+
+  const result = await pool.query(
+    `
+    INSERT INTO files(
+      id,
+      uploader_id,
+      original_name,
+      stored_name,
+      mime_type,
+      size_bytes,
+      url
+    )
+    VALUES($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+    `,
+    [
+      id,
+      uploaderId,
+      file.originalname.slice(0, 255),
+      file.filename,
+      file.mimetype,
+      file.size,
+      `/api/files/${id}`,
+    ]
+  );
+
+  return result.rows[0];
+}
 
 // Photos : gardées en mémoire, vérifiées, puis écrites sur le disque
 const photoUpload = multer({
@@ -319,20 +409,6 @@ function moderatorOrAdmin(req, res, next) {
   }
 
   next();
-}
-
-async function isGroupMember(groupId, userId) {
-  const result = await pool.query(
-    `
-    SELECT *
-    FROM group_members
-    WHERE group_id = $1
-    AND user_id = $2
-    `,
-    [groupId, userId]
-  );
-
-  return result.rows.length > 0;
 }
 
 async function notify(userId, type, message) {
@@ -1846,6 +1922,18 @@ app.delete("/api/groups/:id", auth, async (req, res) => {
     return;
   }
 
+  const attachments = await pool.query(
+    `
+    SELECT file_url
+    FROM group_messages
+    WHERE group_id = $1
+    AND file_url IS NOT NULL
+    `,
+    [req.params.id]
+  );
+
+  await deleteAttachments(attachments.rows.map((row) => row.file_url));
+
   await pool.query(
     `
     DELETE FROM groups_table
@@ -2496,40 +2584,61 @@ app.delete(
    MESSAGES DE GROUPE
 ========================================================= */
 
+const MESSAGE_MAX = 5000;
+
+// Vérifie l'appartenance AVANT de recevoir le fichier :
+// un non-membre ne peut rien déposer sur le disque
+async function groupWriter(req, res, next) {
+  if (await requireGroup(req, res, "canWrite")) {
+    next();
+  }
+}
+
 /*
 POST /api/groups/:id/messages
+Texte (content) et/ou pièce jointe (file, 10 Mo max)
 */
 
 app.post(
   "/api/groups/:id/messages",
   auth,
+  groupWriter,
   upload.single("file"),
   async (req, res) => {
-    const member = await isGroupMember(
-      req.params.id,
-      req.user.id
-    );
-
-    if (!member && req.user.role !== "ADMIN") {
-      return res.status(403).json({
-        message: "Vous n'êtes pas membre du groupe",
+    if (req.fileRejected) {
+      return res.status(400).json({
+        message: "Type de fichier non autorisé",
       });
     }
 
-    const content = req.body.content || null;
+    let content = req.body.content ?? null;
 
-    let fileUrl = null;
-    let fileName = null;
-
-    if (req.file) {
-      fileUrl = `/uploads/${req.file.filename}`;
-      fileName = req.file.originalname;
+    if (content !== null && typeof content !== "string") {
+      await discardUpload(req);
+      return res.status(400).json({
+        message: "Message invalide",
+      });
     }
+
+    content = content?.trim() || null;
 
     if (!content && !req.file) {
       return res.status(400).json({
         message: "Message ou fichier obligatoire",
       });
+    }
+
+    if (content && content.length > MESSAGE_MAX) {
+      await discardUpload(req);
+      return res.status(400).json({
+        message: `Message : ${MESSAGE_MAX} caractères maximum`,
+      });
+    }
+
+    let file = null;
+
+    if (req.file) {
+      file = await saveUploadedFile(req.file, req.user.id);
     }
 
     const result = await pool.query(
@@ -2548,8 +2657,8 @@ app.post(
         req.params.id,
         req.user.id,
         content,
-        fileUrl,
-        fileName,
+        file?.url ?? null,
+        file?.original_name ?? null,
       ]
     );
 
@@ -2559,37 +2668,113 @@ app.post(
 
 /*
 GET /api/groups/:id/messages
+  ?limit=50              derniers messages
+  ?before=<id>           messages plus anciens (historique)
+  ?after=<id>            nouveaux messages (rafraîchissement)
+Toujours triés du plus ancien au plus récent
 */
 
 app.get(
   "/api/groups/:id/messages",
   auth,
   async (req, res) => {
-    const member = await isGroupMember(
-      req.params.id,
-      req.user.id
-    );
+    if (!(await requireGroup(req, res, "canRead"))) {
+      return;
+    }
 
-    if (!member && req.user.role !== "ADMIN") {
-      return res.status(403).json({
-        message: "Accès refusé",
-      });
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+
+    const after = parseInt(req.query.after, 10);
+    const before = parseInt(req.query.before, 10);
+
+    let result;
+
+    if (after) {
+      result = await pool.query(
+        `
+        SELECT gm.*, u.username
+        FROM group_messages gm
+        JOIN users u ON u.id = gm.sender_id
+        WHERE gm.group_id = $1
+        AND gm.id > $2
+        ORDER BY gm.id ASC
+        LIMIT $3
+        `,
+        [req.params.id, after, limit]
+      );
+    } else {
+      result = await pool.query(
+        `
+        SELECT gm.*, u.username
+        FROM group_messages gm
+        JOIN users u ON u.id = gm.sender_id
+        WHERE gm.group_id = $1
+        AND ($2::bigint IS NULL OR gm.id < $2)
+        ORDER BY gm.id DESC
+        LIMIT $3
+        `,
+        [req.params.id, before || null, limit]
+      );
+
+      result.rows.reverse();
+    }
+
+    res.json(result.rows);
+  }
+);
+
+/*
+DELETE /api/groups/:id/messages/:messageId
+Expéditeur, administrateurs du groupe ou modération
+*/
+
+app.delete(
+  "/api/groups/:id/messages/:messageId",
+  auth,
+  async (req, res) => {
+    const access = await requireGroup(req, res, "canRead");
+
+    if (!access) {
+      return;
     }
 
     const result = await pool.query(
       `
-      SELECT
-        gm.*,
-        u.username
-      FROM group_messages gm
-      JOIN users u ON u.id = gm.sender_id
-      WHERE gm.group_id = $1
-      ORDER BY gm.created_at ASC
+      SELECT sender_id, file_url
+      FROM group_messages
+      WHERE id = $1
+      AND group_id = $2
       `,
-      [req.params.id]
+      [req.params.messageId, req.params.id]
     );
 
-    res.json(result.rows);
+    const message = result.rows[0];
+
+    if (!message) {
+      return res.status(404).json({
+        message: "Message introuvable",
+      });
+    }
+
+    if (!access.canAdmin && !canManage(req.user, message.sender_id)) {
+      return res.status(403).json({
+        message: "Vous ne pouvez pas supprimer ce message",
+      });
+    }
+
+    await pool.query(
+      `
+      DELETE FROM group_messages
+      WHERE id = $1
+      `,
+      [req.params.messageId]
+    );
+
+    await deleteAttachments([message.file_url]);
+
+    res.json({
+      message: "Message supprimé",
+    });
   }
 );
 
@@ -2606,40 +2791,90 @@ app.post(
   auth,
   upload.single("file"),
   async (req, res) => {
+    if (req.fileRejected) {
+      return res.status(400).json({
+        message: "Type de fichier non autorisé",
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({
         message: "Fichier manquant",
       });
     }
 
-    const url = `/uploads/${req.file.filename}`;
+    const file = await saveUploadedFile(req.file, req.user.id);
 
-    const result = await pool.query(
-      `
-      INSERT INTO files(
-        uploader_id,
-        original_name,
-        stored_name,
-        mime_type,
-        size_bytes,
-        url
-      )
-      VALUES($1, $2, $3, $4, $5, $6)
-      RETURNING *
-      `,
-      [
-        req.user.id,
-        req.file.originalname,
-        req.file.filename,
-        req.file.mimetype,
-        req.file.size,
-        url,
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(file);
   }
 );
+
+/*
+GET /api/files/:id
+Téléchargement : déposant, admin du site, ou membres du groupe
+dont un message contient ce fichier
+*/
+
+app.get("/api/files/:id", auth, async (req, res) => {
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM files
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  const file = result.rows[0];
+
+  if (!file) {
+    return res.status(404).json({
+      message: "Fichier introuvable",
+    });
+  }
+
+  let allowed = file.uploader_id === req.user.id || req.user.role === "ADMIN";
+
+  if (!allowed) {
+    const messages = await pool.query(
+      `
+      SELECT DISTINCT group_id
+      FROM group_messages
+      WHERE file_url = $1
+      `,
+      [file.url]
+    );
+
+    for (const { group_id } of messages.rows) {
+      const access = await groupAccess(group_id, req.user);
+
+      if (access?.canRead) {
+        allowed = true;
+        break;
+      }
+    }
+  }
+
+  // 404 plutôt que 403 : ne révèle pas l'existence du fichier
+  if (!allowed) {
+    return res.status(404).json({
+      message: "Fichier introuvable",
+    });
+  }
+
+  // Toujours en téléchargement, jamais affiché dans le navigateur
+  res.set("X-Content-Type-Options", "nosniff");
+  res.attachment(file.original_name);
+  res.type("application/octet-stream");
+
+  res.sendFile(path.join(filesDir, path.basename(file.stored_name)), (error) => {
+    if (error && !res.headersSent) {
+      res.status(404).json({
+        message: "Fichier introuvable",
+      });
+    }
+  });
+});
 
 /* =========================================================
    SIGNALEMENTS

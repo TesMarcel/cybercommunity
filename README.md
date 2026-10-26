@@ -989,10 +989,10 @@ La partie SQL comprend :
 * [x] API REST
 * [x] Authentification JWT (limite de tentatives, changement de mot de passe)
 * [ ] Middleware de permissions
-* [ ] Upload sécurisé des fichiers
+* [x] Upload sécurisé des fichiers
 * [ ] Validation avancée
 * [ ] Administration
-* [ ] Tests
+* [x] Tests (npm test)
 * [ ] WebSocket pour le temps réel
 * [ ] Frontend
 

@@ -16,8 +16,8 @@ Dernière mise à jour : 2026-10-26
 | 0 | Commit étape 5 + `PROGRESS.md` | ✅ Terminé |
 | 1 | Tests automatisés de l'API (`node:test`, base de test) | ✅ Terminé |
 | 2 | Groupes : commentaires, quitter, retirer un membre, rôles | ✅ Terminé |
-| 3 | Fichiers et messagerie : types limités, fichiers privés, pagination | ⏳ Prochaine |
-| 4 | Notifications, signalements, modération | À faire |
+| 3 | Fichiers et messagerie : types limités, fichiers privés, pagination | ✅ Terminé |
+| 4 | Notifications, signalements, modération | ⏳ Prochaine |
 | 5 | Durcissement : CORS, en-têtes, journaux | À faire |
 | 5b | Découpage de `server.js` | À faire |
 | 6 | Frontend (6 pages) | À faire |
@@ -25,9 +25,9 @@ Dernière mise à jour : 2026-10-26
 
 ## Tests automatisés
 
-`cd backend && npm test` — 38 tests, 6 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, modération/signalements/notifications/fichiers).
+`cd backend && npm test` — 45 tests, 7 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, fichiers/messagerie, modération/signalements/notifications).
 
-Dernier résultat (2026-10-26, après tâche 2) : **38 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-26, après tâche 3) : **45 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -36,6 +36,7 @@ Dernier résultat (2026-10-26, après tâche 2) : **38 réussis, 0 échec**. Con
 - Profils : mise à jour partielle, email masqué, photo vérifiée par contenu.
 - Forum : CRUD discussions/commentaires, permissions, likes, catégories, pagination.
 - Groupes : visibilité public/privé, rejoindre, admins de groupe (dernier admin protégé), quitter/retirer, discussions et commentaires de groupe.
+- Fichiers : pièces jointes privées (`uploads/files`, téléchargement via `GET /api/files/:id` réservé aux membres), types autorisés, 10 Mo max, suppression avec le message ou le groupe. Messages paginés (`limit`, `before`, `after`).
 
 ## Fichiers importants
 
@@ -46,10 +47,9 @@ Dernier résultat (2026-10-26, après tâche 2) : **38 réussis, 0 échec**. Con
 ## Problèmes connus
 
 - Aucun frontend.
-- Fichiers des groupes privés servis publiquement via `/uploads`.
 - CORS ouvert à toutes les origines.
 - `main` local en avance sur GitHub : le push doit être fait par l'utilisateur.
 
 ## Prochaine action
 
-Tâche 3 : fichiers des messages de groupe réservés aux membres, types et tailles limités, pagination des messages.
+Tâche 4 : notifications (compteur, tout marquer lu, suppression), signalements (cible existante, pas de doublon), modération (hiérarchie des rôles, 404).

@@ -60,11 +60,20 @@ const pool = new Pool({
 
 const uploadDir = path.join(__dirname, "uploads");
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const imagesDir = path.join(uploadDir, "images");
 
-app.use("/uploads", express.static(uploadDir));
+fs.mkdirSync(imagesDir, { recursive: true });
+
+// nosniff : le navigateur ne devine pas le type d'un fichier
+// (un faux .png contenant du HTML ne sera pas exécuté)
+app.use(
+  "/uploads",
+  express.static(uploadDir, {
+    setHeaders: (res) => {
+      res.set("X-Content-Type-Options", "nosniff");
+    },
+  })
+);
 
 /* =========================================================
    MULTER
@@ -92,6 +101,47 @@ const upload = multer({
     fileSize: 25 * 1024 * 1024,
   },
 });
+
+// Photos : gardées en mémoire, vérifiées, puis écrites sur le disque
+const photoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+});
+
+// Le type est déduit des premiers octets du fichier, pas du nom
+// ni du type annoncé par le client (SVG exclu : il peut contenir du JS)
+function detectImageType(buffer) {
+  if (buffer.length < 12) {
+    return null;
+  }
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "jpg";
+  }
+
+  if (
+    buffer.subarray(0, 8).equals(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    )
+  ) {
+    return "png";
+  }
+
+  if (buffer.subarray(0, 6).toString("ascii").match(/^GIF8[79]a$/)) {
+    return "gif";
+  }
+
+  if (
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "webp";
+  }
+
+  return null;
+}
 
 /* =========================================================
    DATABASE
@@ -559,24 +609,57 @@ app.put("/api/auth/password", auth, loginLimiter, async (req, res) => {
    USERS
 ========================================================= */
 
+const isModerator = (user) => ["ADMIN", "MODERATOR"].includes(user.role);
+
 /*
-GET /api/users
+GET /api/users?q=&page=1&limit=20
 */
 
 app.get("/api/users", auth, async (req, res) => {
-  const result = await pool.query(`
-    SELECT
-      id,
-      username,
-      country,
-      role,
-      is_active,
-      created_at
-    FROM users
-    ORDER BY created_at DESC
-  `);
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
 
-  res.json(result.rows);
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+
+  // % et _ sont des jokers pour ILIKE : on les échappe
+  const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+
+  const result = await pool.query(
+    `
+    SELECT
+      u.id,
+      u.username,
+      u.country,
+      u.role,
+      u.is_active,
+      u.created_at,
+      p.pseudonym,
+      p.photo_url,
+      COUNT(*) OVER() AS total
+    FROM users u
+    LEFT JOIN profiles p
+      ON p.user_id = u.id
+    WHERE u.username ILIKE $1
+    OR p.pseudonym ILIKE $1
+    ORDER BY u.created_at DESC
+    LIMIT $2 OFFSET $3
+    `,
+    [pattern, limit, (page - 1) * limit]
+  );
+
+  const showStatus = isModerator(req.user);
+
+  const users = result.rows.map(({ total, is_active, ...user }) =>
+    showStatus ? { ...user, is_active } : user
+  );
+
+  res.json({
+    users,
+    total: result.rows[0]?.total ?? 0,
+    page,
+    limit,
+  });
 });
 
 /*
@@ -613,43 +696,78 @@ app.get("/api/users/:id", auth, async (req, res) => {
     });
   }
 
-  res.json(result.rows[0]);
+  const user = result.rows[0];
+
+  // Email visible uniquement par l'utilisateur lui-même et les admins
+  if (user.id !== req.user.id && req.user.role !== "ADMIN") {
+    delete user.email;
+  }
+
+  if (!isModerator(req.user)) {
+    delete user.is_active;
+  }
+
+  res.json(user);
 });
 
 /*
 PUT /api/users/profile
+Seuls les champs envoyés sont modifiés ; null ou "" vide un champ
 */
 
+const PROFILE_FIELDS = {
+  pseudonym: 100,
+  full_name: 150,
+  country: 100,
+  biography: 2000,
+  skills: 500,
+};
+
 app.put("/api/users/profile", auth, async (req, res) => {
-  const {
-    pseudonym,
-    full_name,
-    country,
-    biography,
-    skills,
-  } = req.body;
+  const columns = [];
+  const values = [];
+
+  for (const [field, maxLength] of Object.entries(PROFILE_FIELDS)) {
+    if (!Object.hasOwn(req.body, field)) {
+      continue;
+    }
+
+    let value = req.body[field];
+
+    if (value !== null && typeof value !== "string") {
+      return res.status(400).json({
+        message: `Le champ ${field} doit être du texte`,
+      });
+    }
+
+    value = value?.trim() || null;
+
+    if (value && value.length > maxLength) {
+      return res.status(400).json({
+        message: `Le champ ${field} ne doit pas dépasser ${maxLength} caractères`,
+      });
+    }
+
+    values.push(value);
+    columns.push(`${field} = $${values.length}`);
+  }
+
+  if (columns.length === 0) {
+    return res.status(400).json({
+      message: "Aucun champ à modifier",
+    });
+  }
+
+  values.push(req.user.id);
 
   const result = await pool.query(
     `
     UPDATE profiles
-    SET
-      pseudonym = $1,
-      full_name = $2,
-      country = $3,
-      biography = $4,
-      skills = $5,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $6
+    SET ${columns.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = $${values.length}
     RETURNING *
     `,
-    [
-      pseudonym,
-      full_name,
-      country,
-      biography,
-      skills,
-      req.user.id,
-    ]
+    values
   );
 
   res.json(result.rows[0]);
@@ -657,12 +775,13 @@ app.put("/api/users/profile", auth, async (req, res) => {
 
 /*
 POST /api/users/profile/photo
+JPEG, PNG, GIF ou WebP, 2 Mo maximum
 */
 
 app.post(
   "/api/users/profile/photo",
   auth,
-  upload.single("photo"),
+  photoUpload.single("photo"),
   async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
@@ -670,16 +789,49 @@ app.post(
       });
     }
 
-    const url = `/uploads/${req.file.filename}`;
+    const extension = detectImageType(req.file.buffer);
+
+    if (!extension) {
+      return res.status(400).json({
+        message: "Format non autorisé (JPEG, PNG, GIF ou WebP uniquement)",
+      });
+    }
+
+    const filename = `${crypto.randomBytes(16).toString("hex")}.${extension}`;
+
+    await fs.promises.writeFile(
+      path.join(imagesDir, filename),
+      req.file.buffer
+    );
+
+    const url = `/uploads/images/${filename}`;
+
+    const previous = await pool.query(
+      `
+      SELECT photo_url
+      FROM profiles
+      WHERE user_id = $1
+      `,
+      [req.user.id]
+    );
 
     await pool.query(
       `
       UPDATE profiles
-      SET photo_url = $1
+      SET photo_url = $1, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = $2
       `,
       [url, req.user.id]
     );
+
+    // Suppression de l'ancienne photo (uniquement dans uploads/images)
+    const oldUrl = previous.rows[0]?.photo_url;
+
+    if (oldUrl?.startsWith("/uploads/images/")) {
+      await fs.promises
+        .unlink(path.join(imagesDir, path.basename(oldUrl)))
+        .catch(() => {});
+    }
 
     res.json({
       message: "Photo mise à jour",
@@ -1777,7 +1929,10 @@ const PG_ERRORS = {
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
-      message: error.message,
+      message:
+        error.code === "LIMIT_FILE_SIZE"
+          ? "Fichier trop volumineux"
+          : error.message,
     });
   }
 

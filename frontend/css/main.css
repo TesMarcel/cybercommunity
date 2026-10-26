@@ -580,3 +580,67 @@ dialog::backdrop {
 input[type="checkbox"].checkbox {
   width: auto;
 }
+
+/* ---------- Onglets ---------- */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* ---------- Messagerie ---------- */
+
+.chat {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.chat-message {
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+}
+
+.chat-message.mine {
+  background: var(--surface-2);
+}
+
+.chat-form textarea {
+  min-height: 4rem;
+}
+
+.member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.member-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Groupe — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/group.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <p><a href="/pages/groups.html">← Tous les groupes</a></p>
+    <div id="message" aria-live="polite"></div>
+    <section id="group-head"><p class="loading">Chargement…</p></section>
+
+    <div id="group-body" class="hidden">
+      <div class="tabs" role="tablist" aria-label="Sections du groupe">
+        <button type="button" role="tab" id="tab-posts" aria-controls="panel-posts" aria-selected="true">Discussions</button>
+        <button type="button" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages</button>
+        <button type="button" role="tab" id="tab-members" aria-controls="panel-members" aria-selected="false" tabindex="-1">Membres</button>
+      </div>
+      <section role="tabpanel" id="panel-posts" aria-labelledby="tab-posts"></section>
+      <section role="tabpanel" id="panel-messages" aria-labelledby="tab-messages" class="hidden"></section>
+      <section role="tabpanel" id="panel-members" aria-labelledby="tab-members" class="hidden"></section>
+    </div>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

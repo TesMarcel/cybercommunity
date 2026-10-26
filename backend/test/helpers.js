@@ -23,6 +23,7 @@ if (!dbName.endsWith("_test")) {
 
 process.env.DATABASE_URL = TEST_DATABASE_URL;
 process.env.JWT_SECRET = "secret-de-test-uniquement-".padEnd(48, "x");
+process.env.LOG_REQUESTS = "false";
 process.env.LOGIN_RATE_LIMIT ??= "1000";
 process.env.REGISTER_RATE_LIMIT ??= "1000";
 process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "cybercom-test-"));
@@ -57,21 +58,22 @@ async function teardown() {
 
 // api("POST", "/api/posts", { token, body }) -> { status, body, headers }
 // form : FormData pour les envois de fichiers
-async function api(method, url, { token, body, form } = {}) {
-  const headers = {};
+// raw : corps envoyé tel quel en JSON ; headers : en-têtes supplémentaires
+async function api(method, url, { token, body, form, raw, headers: extra } = {}) {
+  const headers = { ...extra };
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  if (body !== undefined) {
+  if (body !== undefined || raw !== undefined) {
     headers["Content-Type"] = "application/json";
   }
 
   const response = await fetch(baseUrl + url, {
     method,
     headers,
-    body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
+    body: form ?? raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
 
   const text = await response.text();

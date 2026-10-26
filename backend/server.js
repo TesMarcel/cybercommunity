@@ -13,7 +13,62 @@ const fs = require("fs");
 
 const app = express();
 
-app.use(cors());
+app.disable("x-powered-by");
+
+// Derrière un proxy (Nginx, hébergeur) : nombre de proxys à croire,
+// pour que la limite de tentatives voie la vraie IP du client
+if (process.env.TRUST_PROXY) {
+  app.set("trust proxy", Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
+}
+
+// En-têtes de sécurité (équivalent minimal de helmet, sans dépendance)
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy":
+      "default-src 'self'; img-src 'self' data: blob:; object-src 'none'; " +
+      "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+  });
+
+  // HSTS seulement en production, où le site est servi en HTTPS
+  if (process.env.NODE_ENV === "production") {
+    res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+
+  next();
+});
+
+// CORS : aucune origine extérieure autorisée par défaut (frontend servi
+// par ce même serveur). CORS_ORIGIN=http://localhost:5500,https://... sinon
+const corsOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (corsOrigins.length > 0) {
+  app.use(cors({ origin: corsOrigins }));
+}
+
+// Journal des requêtes : méthode, chemin, statut, durée.
+// Jamais d'en-têtes (token), de corps ni de paramètres (recherches)
+if (process.env.LOG_REQUESTS !== "false") {
+  app.use((req, res, next) => {
+    const start = Date.now();
+
+    res.on("finish", () => {
+      console.log(
+        `${new Date().toISOString()} ${req.method} ${req.path} ${res.statusCode} ${Date.now() - start}ms`
+      );
+    });
+
+    next();
+  });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -3482,7 +3537,23 @@ const PG_ERRORS = {
   "23514": [400, "Valeur non autorisée"],
 };
 
-app.use((error, req, res, next) => {
+app.use(async (error, req, res, next) => {
+  // Fichier reçu mais requête en échec : on ne le garde pas
+  await discardUpload(req);
+
+  // JSON mal formé ou trop volumineux
+  if (error.type === "entity.parse.failed") {
+    return res.status(400).json({
+      message: "JSON invalide",
+    });
+  }
+
+  if (error.type === "entity.too.large") {
+    return res.status(413).json({
+      message: "Requête trop volumineuse",
+    });
+  }
+
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
       message:
@@ -3500,7 +3571,8 @@ app.use((error, req, res, next) => {
     });
   }
 
-  console.error(error);
+  // Message et pile seulement : pas de corps de requête ni d'en-têtes
+  console.error(`${req.method} ${req.path} :`, error.stack || error);
 
   res.status(500).json({
     message: "Erreur interne du serveur",

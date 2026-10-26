@@ -747,27 +747,44 @@ Ils deviennent particulièrement utiles lorsque la base contient beaucoup d'util
 
 # 25. Architecture du projet
 
-La partie SQL peut être organisée ainsi :
+Organisation actuelle :
 
 ```text
-backend/
+cybercommunity/
+│
+├── README.md
+├── ARCHITECTURE.md        (architecture cible)
+├── .gitignore
 │
 ├── database/
-│   ├── database.sql
-│   ├── seed.sql
-│   └── README.md
+│   └── database.sql       (seule source du schéma)
 │
-└── src/
-    └── ...
+└── backend/
+    ├── package.json
+    ├── .env.example
+    └── server.js          (API REST Express)
 ```
 
-Le fichier principal sera :
+`database.sql` est la **seule source de vérité** du schéma : le serveur ne crée pas de tables, il vérifie seulement au démarrage que le schéma est présent.
 
-```text
-database.sql
+## Démarrer le backend
+
+Prérequis : Node.js 18 ou plus récent, PostgreSQL.
+
+```bash
+cd backend
+npm install
+
+cp .env.example .env
+# Remplir DATABASE_URL et JWT_SECRET dans .env
+
+# Créer les tables (une seule fois, base cyber_community déjà créée)
+npm run db:init
+
+npm start          # ou : npm run dev (redémarrage automatique)
 ```
 
-Il contient la structure de PostgreSQL.
+Le serveur refuse de démarrer si `JWT_SECRET` (32 caractères minimum) ou `DATABASE_URL` sont absents.
 
 ---
 

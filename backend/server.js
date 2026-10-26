@@ -2880,6 +2880,24 @@ app.get("/api/files/:id", auth, async (req, res) => {
    SIGNALEMENTS
 ========================================================= */
 
+const REPORT_STATUSES = ["PENDING", "REVIEWED", "RESOLVED", "REJECTED"];
+
+// Requête qui renvoie la cible et, pour les contenus de groupe, son groupe
+const REPORT_TARGETS = {
+  USER: "SELECT id, NULL AS group_id FROM users WHERE id = $1",
+  POST: "SELECT id, NULL AS group_id FROM posts WHERE id = $1",
+  COMMENT: "SELECT id, NULL AS group_id FROM comments WHERE id = $1",
+  GROUP: "SELECT id, id AS group_id FROM groups_table WHERE id = $1",
+  MESSAGE: "SELECT id, group_id FROM group_messages WHERE id = $1",
+};
+
+const parsePage = (query, defaultLimit = 20) => {
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || defaultLimit, 1), 50);
+
+  return { page, limit, offset: (page - 1) * limit };
+};
+
 /*
 POST /api/reports
 */
@@ -2895,10 +2913,71 @@ app.post(
       details,
     } = req.body;
 
-    if (!target_type || !target_id || !reason) {
+    if (!Object.hasOwn(REPORT_TARGETS, target_type)) {
       return res.status(400).json({
-        message:
-          "target_type, target_id et reason sont obligatoires",
+        message: `target_type doit valoir ${Object.keys(REPORT_TARGETS).join(", ")}`,
+      });
+    }
+
+    if (!Number.isInteger(Number(target_id)) || Number(target_id) <= 0) {
+      return res.status(400).json({
+        message: "target_id invalide",
+      });
+    }
+
+    const error = checkText(reason, "Motif", 100);
+
+    if (error) {
+      return res.status(400).json({
+        message: error,
+      });
+    }
+
+    if (details != null && (typeof details !== "string" || details.length > 2000)) {
+      return res.status(400).json({
+        message: "Détails : texte de 2000 caractères maximum",
+      });
+    }
+
+    if (target_type === "USER" && Number(target_id) === req.user.id) {
+      return res.status(400).json({
+        message: "Vous ne pouvez pas vous signaler vous-même",
+      });
+    }
+
+    const target = (
+      await pool.query(REPORT_TARGETS[target_type], [target_id])
+    ).rows[0];
+
+    // Contenu de groupe : il faut pouvoir le voir pour le signaler
+    // (les groupes privés restent invisibles aux non-membres)
+    let visible = Boolean(target);
+
+    if (target?.group_id) {
+      visible = Boolean((await groupAccess(target.group_id, req.user))?.canRead);
+    }
+
+    if (!visible) {
+      return res.status(404).json({
+        message: "Élément signalé introuvable",
+      });
+    }
+
+    const duplicate = await pool.query(
+      `
+      SELECT id
+      FROM reports
+      WHERE reporter_id = $1
+      AND target_type = $2
+      AND target_id = $3
+      AND status = 'PENDING'
+      `,
+      [req.user.id, target_type, target_id]
+    );
+
+    if (duplicate.rows.length > 0) {
+      return res.status(409).json({
+        message: "Vous avez déjà signalé cet élément, il est en cours d'examen",
       });
     }
 
@@ -2918,8 +2997,8 @@ app.post(
         req.user.id,
         target_type,
         target_id,
-        reason,
-        details || null,
+        reason.trim(),
+        details?.trim() || null,
       ]
     );
 
@@ -2931,7 +3010,7 @@ app.post(
 );
 
 /*
-GET /api/reports
+GET /api/reports?status=PENDING&page=1&limit=20
 MODERATOR / ADMIN
 */
 
@@ -2940,17 +3019,41 @@ app.get(
   auth,
   moderatorOrAdmin,
   async (req, res) => {
-    const result = await pool.query(`
+    const { page, limit, offset } = parsePage(req.query);
+
+    const status = req.query.status;
+
+    if (status && !REPORT_STATUSES.includes(status)) {
+      return res.status(400).json({
+        message: "Statut invalide",
+      });
+    }
+
+    const result = await pool.query(
+      `
       SELECT
         r.*,
-        u.username AS reporter
+        u.username AS reporter,
+        h.username AS handler,
+        COUNT(*) OVER() AS total
       FROM reports r
       JOIN users u
         ON u.id = r.reporter_id
+      LEFT JOIN users h
+        ON h.id = r.handled_by
+      WHERE ($1::text IS NULL OR r.status = $1)
       ORDER BY r.created_at DESC
-    `);
+      LIMIT $2 OFFSET $3
+      `,
+      [status || null, limit, offset]
+    );
 
-    res.json(result.rows);
+    res.json({
+      reports: result.rows.map(({ total, ...report }) => report),
+      total: result.rows[0]?.total ?? 0,
+      page,
+      limit,
+    });
   }
 );
 
@@ -2968,14 +3071,7 @@ app.put(
       status,
     } = req.body;
 
-    const allowed = [
-      "PENDING",
-      "REVIEWED",
-      "RESOLVED",
-      "REJECTED",
-    ];
-
-    if (!allowed.includes(status)) {
+    if (!REPORT_STATUSES.includes(status)) {
       return res.status(400).json({
         message: "Statut invalide",
       });
@@ -2998,7 +3094,25 @@ app.put(
       ]
     );
 
-    res.json(result.rows[0]);
+    const report = result.rows[0];
+
+    if (!report) {
+      return res.status(404).json({
+        message: "Signalement introuvable",
+      });
+    }
+
+    if (status === "RESOLVED" || status === "REJECTED") {
+      await notify(
+        report.reporter_id,
+        "REPORT_UPDATE",
+        status === "RESOLVED"
+          ? "Votre signalement a été traité. Merci !"
+          : "Votre signalement a été examiné et rejeté."
+      );
+    }
+
+    res.json(report);
   }
 );
 
@@ -3066,6 +3180,47 @@ app.delete(
   }
 );
 
+// Suspension / réactivation : un modérateur n'agit que sur les
+// utilisateurs simples, un admin sur tous sauf lui-même
+async function setUserActive(req, res, isActive) {
+  const target = (
+    await pool.query("SELECT id, role FROM users WHERE id = $1", [req.params.id])
+  ).rows[0];
+
+  if (!target) {
+    return res.status(404).json({
+      message: "Utilisateur introuvable",
+    });
+  }
+
+  if (target.id === req.user.id) {
+    return res.status(400).json({
+      message: "Vous ne pouvez pas modifier votre propre compte",
+    });
+  }
+
+  if (req.user.role !== "ADMIN" && target.role !== "USER") {
+    return res.status(403).json({
+      message: "Seul un administrateur peut agir sur un modérateur ou un administrateur",
+    });
+  }
+
+  const result = await pool.query(
+    `
+    UPDATE users
+    SET is_active = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
+    RETURNING id, username, is_active
+    `,
+    [isActive, target.id]
+  );
+
+  res.json({
+    message: isActive ? "Utilisateur réactivé" : "Utilisateur suspendu",
+    user: result.rows[0],
+  });
+}
+
 /*
 PUT /api/moderation/users/:id/suspend
 */
@@ -3074,28 +3229,7 @@ app.put(
   "/api/moderation/users/:id/suspend",
   auth,
   moderatorOrAdmin,
-  async (req, res) => {
-    const result = await pool.query(
-      `
-      UPDATE users
-      SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING id, username, is_active
-      `,
-      [req.params.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: "Utilisateur introuvable",
-      });
-    }
-
-    res.json({
-      message: "Utilisateur suspendu",
-      user: result.rows[0],
-    });
-  }
+  (req, res) => setUserActive(req, res, false)
 );
 
 /*
@@ -3106,22 +3240,7 @@ app.put(
   "/api/moderation/users/:id/activate",
   auth,
   moderatorOrAdmin,
-  async (req, res) => {
-    const result = await pool.query(
-      `
-      UPDATE users
-      SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING id, username, is_active
-      `,
-      [req.params.id]
-    );
-
-    res.json({
-      message: "Utilisateur réactivé",
-      user: result.rows[0],
-    });
-  }
+  (req, res) => setUserActive(req, res, true)
 );
 
 /* =========================================================
@@ -3130,6 +3249,8 @@ app.put(
 
 /*
 PUT /api/admin/users/:id/role
+Un admin ne peut pas changer son propre rôle : il reste
+donc toujours au moins un administrateur
 */
 
 app.put(
@@ -3147,6 +3268,12 @@ app.put(
       });
     }
 
+    if (Number(req.params.id) === req.user.id) {
+      return res.status(400).json({
+        message: "Vous ne pouvez pas modifier votre propre rôle",
+      });
+    }
+
     const result = await pool.query(
       `
       UPDATE users
@@ -3160,6 +3287,12 @@ app.put(
       ]
     );
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Utilisateur introuvable",
+      });
+    }
+
     res.json(result.rows[0]);
   }
 );
@@ -3169,24 +3302,96 @@ app.put(
 ========================================================= */
 
 /*
-GET /api/notifications
+GET /api/notifications?unread=true&page=1&limit=20
 */
 
 app.get(
   "/api/notifications",
   auth,
   async (req, res) => {
+    const { page, limit, offset } = parsePage(req.query);
+
+    const unreadOnly = req.query.unread === "true";
+
     const result = await pool.query(
       `
-      SELECT *
+      SELECT
+        *,
+        COUNT(*) OVER() AS total
       FROM notifications
       WHERE user_id = $1
-      ORDER BY created_at DESC
+      AND ($2 = FALSE OR is_read = FALSE)
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3 OFFSET $4
+      `,
+      [req.user.id, unreadOnly, limit, offset]
+    );
+
+    const unread = await pool.query(
+      `
+      SELECT COUNT(*) AS unread
+      FROM notifications
+      WHERE user_id = $1
+      AND is_read = FALSE
       `,
       [req.user.id]
     );
 
-    res.json(result.rows);
+    res.json({
+      notifications: result.rows.map(({ total, ...notification }) => notification),
+      total: result.rows[0]?.total ?? 0,
+      unread: unread.rows[0].unread,
+      page,
+      limit,
+    });
+  }
+);
+
+/*
+GET /api/notifications/unread-count
+Léger : pour le badge rafraîchi régulièrement par le frontend
+*/
+
+app.get(
+  "/api/notifications/unread-count",
+  auth,
+  async (req, res) => {
+    const result = await pool.query(
+      `
+      SELECT COUNT(*) AS unread
+      FROM notifications
+      WHERE user_id = $1
+      AND is_read = FALSE
+      `,
+      [req.user.id]
+    );
+
+    res.json(result.rows[0]);
+  }
+);
+
+/*
+PUT /api/notifications/read-all
+*/
+
+app.put(
+  "/api/notifications/read-all",
+  auth,
+  async (req, res) => {
+    const result = await pool.query(
+      `
+      UPDATE notifications
+      SET is_read = TRUE
+      WHERE user_id = $1
+      AND is_read = FALSE
+      `,
+      [req.user.id]
+    );
+
+    res.json({
+      message: "Notifications marquées comme lues",
+      updated: result.rowCount,
+    });
   }
 );
 
@@ -3212,7 +3417,45 @@ app.put(
       ]
     );
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Notification introuvable",
+      });
+    }
+
     res.json(result.rows[0]);
+  }
+);
+
+/*
+DELETE /api/notifications/:id
+*/
+
+app.delete(
+  "/api/notifications/:id",
+  auth,
+  async (req, res) => {
+    const result = await pool.query(
+      `
+      DELETE FROM notifications
+      WHERE id = $1
+      AND user_id = $2
+      `,
+      [
+        req.params.id,
+        req.user.id,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Notification introuvable",
+      });
+    }
+
+    res.json({
+      message: "Notification supprimée",
+    });
   }
 );
 

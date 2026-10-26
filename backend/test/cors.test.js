@@ -16,6 +16,6 @@ test("CORS : origines de CORS_ORIGIN autorisées, les autres non", async () => {
     assert.equal(res.headers.get("access-control-allow-origin"), origin);
   }
 
-  const other = await api("GET", "/", { headers: { Origin: "https://autre.example" } });
+  const other = await api("GET", "/api/health", { headers: { Origin: "https://autre.example" } });
   assert.equal(other.headers.get("access-control-allow-origin"), null);
 });

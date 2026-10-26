@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Discussion — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/post.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <p><a href="/pages/forum.html">← Retour au forum</a></p>
+    <div id="message" aria-live="polite"></div>
+    <article id="post"><p class="loading">Chargement…</p></article>
+
+    <section aria-labelledby="comments-title" id="comments-section" class="hidden">
+      <h2 id="comments-title">Commentaires</h2>
+      <ul class="comments" id="comments"></ul>
+
+      <form class="card" id="comment-form" novalidate>
+        <div id="comment-message" aria-live="polite"></div>
+        <label for="comment-content">Ajouter un commentaire</label>
+        <textarea id="comment-content" name="content" required maxlength="5000"></textarea>
+        <p><button class="button-primary" type="submit">Commenter</button></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

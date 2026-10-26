@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/auth.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="narrow card" aria-labelledby="title">
+      <h1 id="title">Connexion</h1>
+      <div id="message" aria-live="polite"></div>
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label for="login">Nom d'utilisateur ou email</label>
+          <input id="login" name="login" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="button-primary" type="submit">Se connecter</button>
+      </form>
+      <p class="muted small">Pas encore de compte ? <a href="/pages/register.html">Créer un compte</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

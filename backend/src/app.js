@@ -1,4 +1,5 @@
 // Application Express : middlewares communs, routes, gestion des erreurs
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { imagesDir } = require("./utils/files");
@@ -82,7 +83,10 @@ app.use(
   })
 );
 
-app.get("/", (req, res) => {
+// Frontend (HTML / CSS / JS) servi par le même serveur que l'API
+app.use(express.static(path.join(__dirname, "..", "..", "frontend")));
+
+app.get("/api/health", (req, res) => {
   res.json({
     application: "Cyber Community API",
     status: "online",

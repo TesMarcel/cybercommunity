@@ -6,7 +6,7 @@ before(setup);
 after(teardown);
 
 test("en-têtes de sécurité présents, X-Powered-By absent", async () => {
-  const res = await api("GET", "/");
+  const res = await api("GET", "/api/health");
 
   assert.equal(res.headers.get("x-content-type-options"), "nosniff");
   assert.equal(res.headers.get("x-frame-options"), "DENY");
@@ -21,7 +21,7 @@ test("en-têtes de sécurité présents, X-Powered-By absent", async () => {
 test("CORS fermé par défaut : aucune origine extérieure autorisée", async () => {
   const headers = { Origin: "https://site-malveillant.example" };
 
-  const get = await api("GET", "/", { headers });
+  const get = await api("GET", "/api/health", { headers });
   assert.equal(get.headers.get("access-control-allow-origin"), null);
 
   const preflight = await api("OPTIONS", "/api/posts", {

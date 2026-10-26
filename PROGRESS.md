@@ -15,8 +15,8 @@ Dernière mise à jour : 2026-10-26
 |---|---|---|
 | 0 | Commit étape 5 + `PROGRESS.md` | ✅ Terminé |
 | 1 | Tests automatisés de l'API (`node:test`, base de test) | ✅ Terminé |
-| 2 | Groupes : commentaires, quitter, retirer un membre, rôles | ⏳ Prochaine |
-| 3 | Fichiers et messagerie : types limités, fichiers privés, pagination | À faire |
+| 2 | Groupes : commentaires, quitter, retirer un membre, rôles | ✅ Terminé |
+| 3 | Fichiers et messagerie : types limités, fichiers privés, pagination | ⏳ Prochaine |
 | 4 | Notifications, signalements, modération | À faire |
 | 5 | Durcissement : CORS, en-têtes, journaux | À faire |
 | 5b | Découpage de `server.js` | À faire |
@@ -25,9 +25,9 @@ Dernière mise à jour : 2026-10-26
 
 ## Tests automatisés
 
-`cd backend && npm test` — 32 tests, 6 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, modération/signalements/notifications/fichiers).
+`cd backend && npm test` — 38 tests, 6 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, modération/signalements/notifications/fichiers).
 
-Dernier résultat (2026-10-26) : **32 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-26, après tâche 2) : **38 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -35,6 +35,7 @@ Dernier résultat (2026-10-26) : **32 réussis, 0 échec**. Contrôle : un bug i
 - Auth : inscription validée, connexion, limite de tentatives, `/me`, changement de mot de passe (anciens tokens invalidés).
 - Profils : mise à jour partielle, email masqué, photo vérifiée par contenu.
 - Forum : CRUD discussions/commentaires, permissions, likes, catégories, pagination.
+- Groupes : visibilité public/privé, rejoindre, admins de groupe (dernier admin protégé), quitter/retirer, discussions et commentaires de groupe.
 
 ## Fichiers importants
 
@@ -51,4 +52,4 @@ Dernier résultat (2026-10-26) : **32 réussis, 0 échec**. Contrôle : un bug i
 
 ## Prochaine action
 
-Tâche 2 (groupes) : commentaires de groupe, quitter un groupe, retirer un membre, rôles d'admin de groupe.
+Tâche 3 : fichiers des messages de groupe réservés aux membres, types et tailles limités, pagination des messages.

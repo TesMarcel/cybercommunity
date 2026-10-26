@@ -1,4 +1,13 @@
-# Cyber Community — Backend SQL
+# Cyber Community
+
+Plateforme communautaire (forum, groupes, messagerie, modération) autour de la cybersécurité, de la programmation, de Linux et des CTF.
+
+- **Démarrer en local** : section [Démarrer le backend](#démarrer-le-backend), puis ouvrir http://localhost:5000
+- **Routes de l'API** : [docs/API.md](docs/API.md)
+- **Déploiement, sauvegarde, restauration** : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md)
+- **Organisation du code** : [ARCHITECTURE.md](ARCHITECTURE.md) — **suivi** : [PROGRESS.md](PROGRESS.md)
+
+La suite de ce document décrit en détail la base de données.
 
 ## 1. Présentation
 
@@ -22,7 +31,7 @@ La base de données est conçue pour gérer :
 * les catégories du forum.
 
 > Cette base fournit uniquement la partie **SQL / PostgreSQL**.
-> Le backend applicatif en Node.js/Express sera connecté à cette base ultérieurement.
+> Le backend Node.js/Express (`backend/`) et le frontend (`frontend/`) utilisent cette base.
 
 ---
 
@@ -33,7 +42,8 @@ Le projet utilise :
 * **PostgreSQL** : système de gestion de base de données
 * **pgAdmin** : interface graphique pour PostgreSQL
 * **SQL** : création et gestion de la structure de la base
-* **Node.js / Express** : futur backend API
+* **Node.js / Express** : API REST et service du frontend
+* **HTML / CSS / JavaScript** : frontend, sans framework
 
 ---
 
@@ -949,7 +959,7 @@ les données.
 
 ---
 
-# 30. Connexion future avec le backend
+# 30. Connexion avec le backend
 
 Le backend Node.js/Express communiquera avec PostgreSQL.
 
@@ -1010,10 +1020,12 @@ La partie SQL comprend :
 * [x] Authentification JWT (limite de tentatives, changement de mot de passe)
 * [x] Middleware de permissions
 * [x] Upload sécurisé des fichiers
-* [ ] Validation avancée
+* [x] Validation des entrées côté serveur
 * [x] Administration (API)
 * [x] Tests (npm test)
-* [ ] WebSocket pour le temps réel
+* [x] Messagerie rafraîchie toutes les 5 secondes (WebSocket écarté : choix validé)
+* [x] Tests navigateur (npm run test:e2e)
+* [x] Documentation : API, déploiement, sauvegarde
 * [x] Frontend (HTML / CSS / JavaScript)
 
 ---
@@ -1028,21 +1040,18 @@ Les fonctionnalités communautaires, de cybersécurité défensive, de programma
 
 ---
 
-# 33. Commande de sauvegarde PostgreSQL
+# 33. Sauvegarde et restauration
 
-Une fois la base fonctionnelle, il est recommandé de faire régulièrement des sauvegardes.
-
-Avec PostgreSQL :
+La base seule ne suffit pas : les photos de profil et les pièces jointes sont des fichiers (`backend/uploads/`). Le script fourni sauvegarde les deux :
 
 ```bash
-pg_dump -U postgres -d cyber_community > cyber_community_backup.sql
+cd backend
+npm run backup
 ```
 
-Pour restaurer une sauvegarde :
+Résultat dans `backend/backups/` : un fichier `.dump` (base) et un `.uploads.tar.gz` (fichiers). Les 14 dernières sauvegardes sont conservées.
 
-```bash
-psql -U postgres -d cyber_community < cyber_community_backup.sql
-```
+Restauration, sauvegarde automatique quotidienne et copie hors du serveur : voir [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md#9-sauvegarde).
 
 ---
 
@@ -1052,9 +1061,9 @@ psql -U postgres -d cyber_community < cyber_community_backup.sql
 
 Il définit les données et leurs relations.
 
-Le backend applicatif viendra ensuite utiliser cette structure pour fournir une API.
+Le backend applicatif utilise cette structure pour fournir une API.
 
-La séparation sera donc :
+La séparation est donc :
 
 ```text
 PostgreSQL

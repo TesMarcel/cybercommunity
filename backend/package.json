@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "db:init": "psql \"$DATABASE_URL\" -f ../database/database.sql"
+    "db:init": "node scripts/db-init.js"
   },
   "engines": {
     "node": ">=18"

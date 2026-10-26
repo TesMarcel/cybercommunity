@@ -844,15 +844,30 @@ app.post(
    CATEGORIES
 ========================================================= */
 
+// Vérifie un champ texte obligatoire ; renvoie un message d'erreur ou null
+function checkText(value, label, maxLength) {
+  if (typeof value !== "string" || !value.trim()) {
+    return `${label} obligatoire`;
+  }
+
+  if (value.trim().length > maxLength) {
+    return `${label} : ${maxLength} caractères maximum`;
+  }
+
+  return null;
+}
+
 /*
 GET /api/categories
 */
 
 app.get("/api/categories", auth, async (req, res) => {
   const result = await pool.query(`
-    SELECT *
-    FROM categories
-    ORDER BY name
+    SELECT
+      c.*,
+      (SELECT COUNT(*) FROM posts p WHERE p.category_id = c.id) AS posts
+    FROM categories c
+    ORDER BY c.name
   `);
 
   res.json(result.rows);
@@ -868,11 +883,11 @@ app.post(
   auth,
   adminOnly,
   async (req, res) => {
-    const { name } = req.body;
+    const error = checkText(req.body.name, "Nom", 100);
 
-    if (!name) {
+    if (error) {
       return res.status(400).json({
-        message: "Nom obligatoire",
+        message: error,
       });
     }
 
@@ -882,10 +897,79 @@ app.post(
       VALUES($1)
       RETURNING *
       `,
-      [name]
+      [req.body.name.trim()]
     );
 
     res.status(201).json(result.rows[0]);
+  }
+);
+
+/*
+PUT /api/categories/:id
+ADMIN ONLY
+*/
+
+app.put(
+  "/api/categories/:id",
+  auth,
+  adminOnly,
+  async (req, res) => {
+    const error = checkText(req.body.name, "Nom", 100);
+
+    if (error) {
+      return res.status(400).json({
+        message: error,
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE categories
+      SET name = $1
+      WHERE id = $2
+      RETURNING *
+      `,
+      [req.body.name.trim(), req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Catégorie introuvable",
+      });
+    }
+
+    res.json(result.rows[0]);
+  }
+);
+
+/*
+DELETE /api/categories/:id
+ADMIN ONLY — les discussions restent, sans catégorie
+*/
+
+app.delete(
+  "/api/categories/:id",
+  auth,
+  adminOnly,
+  async (req, res) => {
+    const result = await pool.query(
+      `
+      DELETE FROM categories
+      WHERE id = $1
+      RETURNING id
+      `,
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Catégorie introuvable",
+      });
+    }
+
+    res.json({
+      message: "Catégorie supprimée",
+    });
   }
 );
 
@@ -893,36 +977,80 @@ app.post(
    FORUM
 ========================================================= */
 
+const POST_TITLE_MAX = 200;
+const POST_CONTENT_MAX = 20000;
+const COMMENT_MAX = 5000;
+
+// Auteur du contenu, ou modérateur / admin
+const canManage = (user, authorId) =>
+  user.id === authorId || isModerator(user);
+
 /*
-GET /api/posts
+GET /api/posts?category_id=&author_id=&q=&page=1&limit=20
 */
 
 app.get("/api/posts", auth, async (req, res) => {
-  const result = await pool.query(`
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+
+  const filters = [];
+  const values = [req.user.id];
+
+  if (req.query.category_id) {
+    values.push(req.query.category_id);
+    filters.push(`p.category_id = $${values.length}`);
+  }
+
+  if (req.query.author_id) {
+    values.push(req.query.author_id);
+    filters.push(`p.author_id = $${values.length}`);
+  }
+
+  if (typeof req.query.q === "string" && req.query.q.trim()) {
+    values.push(`%${req.query.q.trim().replace(/[\\%_]/g, "\\$&")}%`);
+    filters.push(
+      `(p.title ILIKE $${values.length} OR p.content ILIKE $${values.length})`
+    );
+  }
+
+  values.push(limit, (page - 1) * limit);
+
+  const result = await pool.query(
+    `
     SELECT
       p.id,
       p.title,
       p.content,
       p.created_at,
+      p.updated_at,
       u.id AS author_id,
       u.username AS author,
       c.id AS category_id,
       c.name AS category,
-      COUNT(DISTINCT l.user_id) AS likes,
-      COUNT(DISTINCT cm.id) AS comments
+      (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS likes,
+      (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.id) AS comments,
+      EXISTS(
+        SELECT 1 FROM post_likes l
+        WHERE l.post_id = p.id AND l.user_id = $1
+      ) AS liked_by_me,
+      COUNT(*) OVER() AS total
     FROM posts p
     JOIN users u ON u.id = p.author_id
     LEFT JOIN categories c ON c.id = p.category_id
-    LEFT JOIN post_likes l ON l.post_id = p.id
-    LEFT JOIN comments cm ON cm.post_id = p.id
-    GROUP BY
-      p.id,
-      u.id,
-      c.id
+    ${filters.length ? "WHERE " + filters.join(" AND ") : ""}
     ORDER BY p.created_at DESC
-  `);
+    LIMIT $${values.length - 1} OFFSET $${values.length}
+    `,
+    values
+  );
 
-  res.json(result.rows);
+  res.json({
+    posts: result.rows.map(({ total, ...post }) => post),
+    total: result.rows[0]?.total ?? 0,
+    page,
+    limit,
+  });
 });
 
 /*
@@ -935,13 +1063,18 @@ app.get("/api/posts/:id", auth, async (req, res) => {
     SELECT
       p.*,
       u.username AS author,
-      c.name AS category
+      c.name AS category,
+      (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS likes,
+      EXISTS(
+        SELECT 1 FROM post_likes l
+        WHERE l.post_id = p.id AND l.user_id = $2
+      ) AS liked_by_me
     FROM posts p
     JOIN users u ON u.id = p.author_id
     LEFT JOIN categories c ON c.id = p.category_id
     WHERE p.id = $1
     `,
-    [req.params.id]
+    [req.params.id, req.user.id]
   );
 
   if (post.rows.length === 0) {
@@ -971,48 +1104,164 @@ app.get("/api/posts/:id", auth, async (req, res) => {
 
 /*
 POST /api/posts
-ADMIN ONLY
+Tous les membres
 */
 
-app.post(
-  "/api/posts",
-  auth,
-  adminOnly,
-  async (req, res) => {
-    const {
-      title,
-      content,
-      category_id,
-    } = req.body;
+app.post("/api/posts", auth, async (req, res) => {
+  const {
+    title,
+    content,
+    category_id,
+  } = req.body;
 
-    if (!title || !content || !category_id) {
+  const error =
+    checkText(title, "Titre", POST_TITLE_MAX) ||
+    checkText(content, "Contenu", POST_CONTENT_MAX);
+
+  if (error) {
+    return res.status(400).json({
+      message: error,
+    });
+  }
+
+  // Catégorie facultative ; une catégorie inexistante donne un 400
+  const result = await pool.query(
+    `
+    INSERT INTO posts(
+      author_id,
+      category_id,
+      title,
+      content
+    )
+    VALUES($1, $2, $3, $4)
+    RETURNING *
+    `,
+    [
+      req.user.id,
+      category_id || null,
+      title.trim(),
+      content.trim(),
+    ]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+
+/*
+PUT /api/posts/:id
+Auteur uniquement — seuls les champs envoyés sont modifiés
+*/
+
+app.put("/api/posts/:id", auth, async (req, res) => {
+  const existing = await pool.query(
+    `
+    SELECT author_id
+    FROM posts
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  if (existing.rows.length === 0) {
+    return res.status(404).json({
+      message: "Discussion introuvable",
+    });
+  }
+
+  if (existing.rows[0].author_id !== req.user.id) {
+    return res.status(403).json({
+      message: "Seul l'auteur peut modifier cette discussion",
+    });
+  }
+
+  const columns = [];
+  const values = [];
+
+  for (const [field, label, maxLength] of [
+    ["title", "Titre", POST_TITLE_MAX],
+    ["content", "Contenu", POST_CONTENT_MAX],
+  ]) {
+    if (!Object.hasOwn(req.body, field)) {
+      continue;
+    }
+
+    const error = checkText(req.body[field], label, maxLength);
+
+    if (error) {
       return res.status(400).json({
-        message: "Titre, contenu et catégorie obligatoires",
+        message: error,
       });
     }
 
-    const result = await pool.query(
-      `
-      INSERT INTO posts(
-        author_id,
-        category_id,
-        title,
-        content
-      )
-      VALUES($1, $2, $3, $4)
-      RETURNING *
-      `,
-      [
-        req.user.id,
-        category_id,
-        title,
-        content,
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
+    values.push(req.body[field].trim());
+    columns.push(`${field} = $${values.length}`);
   }
-);
+
+  if (Object.hasOwn(req.body, "category_id")) {
+    values.push(req.body.category_id || null);
+    columns.push(`category_id = $${values.length}`);
+  }
+
+  if (columns.length === 0) {
+    return res.status(400).json({
+      message: "Aucun champ à modifier",
+    });
+  }
+
+  values.push(req.params.id);
+
+  const result = await pool.query(
+    `
+    UPDATE posts
+    SET ${columns.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $${values.length}
+    RETURNING *
+    `,
+    values
+  );
+
+  res.json(result.rows[0]);
+});
+
+/*
+DELETE /api/posts/:id
+Auteur, modérateur ou admin
+*/
+
+app.delete("/api/posts/:id", auth, async (req, res) => {
+  const existing = await pool.query(
+    `
+    SELECT author_id
+    FROM posts
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  if (existing.rows.length === 0) {
+    return res.status(404).json({
+      message: "Discussion introuvable",
+    });
+  }
+
+  if (!canManage(req.user, existing.rows[0].author_id)) {
+    return res.status(403).json({
+      message: "Vous ne pouvez pas supprimer cette discussion",
+    });
+  }
+
+  await pool.query(
+    `
+    DELETE FROM posts
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  res.json({
+    message: "Discussion supprimée",
+  });
+});
 
 /*
 POST /api/posts/:id/comments
@@ -1027,9 +1276,11 @@ app.post(
       parent_id,
     } = req.body;
 
-    if (!content) {
+    const error = checkText(content, "Contenu", COMMENT_MAX);
+
+    if (error) {
       return res.status(400).json({
-        message: "Contenu obligatoire",
+        message: error,
       });
     }
 
@@ -1048,6 +1299,29 @@ app.post(
       });
     }
 
+    // Une réponse doit viser un commentaire de la même discussion
+    let parent = null;
+
+    if (parent_id) {
+      const parentResult = await pool.query(
+        `
+        SELECT id, author_id
+        FROM comments
+        WHERE id = $1
+        AND post_id = $2
+        `,
+        [parent_id, req.params.id]
+      );
+
+      parent = parentResult.rows[0];
+
+      if (!parent) {
+        return res.status(400).json({
+          message: "Le commentaire parent n'appartient pas à cette discussion",
+        });
+      }
+    }
+
     const result = await pool.query(
       `
       INSERT INTO comments(
@@ -1062,35 +1336,159 @@ app.post(
       [
         req.params.id,
         req.user.id,
-        parent_id || null,
-        content,
+        parent ? parent.id : null,
+        content.trim(),
       ]
     );
 
-    await notify(
-      post.rows[0].author_id,
-      "COMMENT",
-      `${req.user.username} a commenté votre discussion.`
-    );
+    // Pas de notification pour ses propres contenus
+    const postAuthorId = post.rows[0].author_id;
+
+    if (postAuthorId !== req.user.id) {
+      await notify(
+        postAuthorId,
+        "COMMENT",
+        `${req.user.username} a commenté votre discussion.`
+      );
+    }
+
+    if (
+      parent &&
+      parent.author_id !== req.user.id &&
+      parent.author_id !== postAuthorId
+    ) {
+      await notify(
+        parent.author_id,
+        "REPLY",
+        `${req.user.username} a répondu à votre commentaire.`
+      );
+    }
 
     res.status(201).json(result.rows[0]);
   }
 );
 
 /*
+PUT /api/comments/:id
+Auteur uniquement
+*/
+
+app.put("/api/comments/:id", auth, async (req, res) => {
+  const error = checkText(req.body.content, "Contenu", COMMENT_MAX);
+
+  if (error) {
+    return res.status(400).json({
+      message: error,
+    });
+  }
+
+  const existing = await pool.query(
+    `
+    SELECT author_id
+    FROM comments
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  if (existing.rows.length === 0) {
+    return res.status(404).json({
+      message: "Commentaire introuvable",
+    });
+  }
+
+  if (existing.rows[0].author_id !== req.user.id) {
+    return res.status(403).json({
+      message: "Seul l'auteur peut modifier ce commentaire",
+    });
+  }
+
+  const result = await pool.query(
+    `
+    UPDATE comments
+    SET content = $1
+    WHERE id = $2
+    RETURNING *
+    `,
+    [req.body.content.trim(), req.params.id]
+  );
+
+  res.json(result.rows[0]);
+});
+
+/*
+DELETE /api/comments/:id
+Auteur, modérateur ou admin — les réponses sont supprimées avec
+*/
+
+app.delete("/api/comments/:id", auth, async (req, res) => {
+  const existing = await pool.query(
+    `
+    SELECT author_id
+    FROM comments
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  if (existing.rows.length === 0) {
+    return res.status(404).json({
+      message: "Commentaire introuvable",
+    });
+  }
+
+  if (!canManage(req.user, existing.rows[0].author_id)) {
+    return res.status(403).json({
+      message: "Vous ne pouvez pas supprimer ce commentaire",
+    });
+  }
+
+  await pool.query(
+    `
+    DELETE FROM comments
+    WHERE id = $1
+    `,
+    [req.params.id]
+  );
+
+  res.json({
+    message: "Commentaire supprimé",
+  });
+});
+
+/*
 POST /api/posts/:id/like
+Ajoute ou retire le like
 */
 
 app.post(
   "/api/posts/:id/like",
   auth,
   async (req, res) => {
-    const existing = await pool.query(
+    const post = await pool.query(
       `
-      SELECT 1
-      FROM post_likes
-      WHERE post_id = $1
-      AND user_id = $2
+      SELECT id
+      FROM posts
+      WHERE id = $1
+      `,
+      [req.params.id]
+    );
+
+    if (post.rows.length === 0) {
+      return res.status(404).json({
+        message: "Discussion introuvable",
+      });
+    }
+
+    // Insertion atomique : deux clics simultanés ne créent pas d'erreur
+    const inserted = await pool.query(
+      `
+      INSERT INTO post_likes(
+        post_id,
+        user_id
+      )
+      VALUES($1, $2)
+      ON CONFLICT DO NOTHING
       `,
       [
         req.params.id,
@@ -1098,7 +1496,9 @@ app.post(
       ]
     );
 
-    if (existing.rows.length > 0) {
+    const liked = inserted.rowCount === 1;
+
+    if (!liked) {
       await pool.query(
         `
         DELETE FROM post_likes
@@ -1110,28 +1510,20 @@ app.post(
           req.user.id,
         ]
       );
-
-      return res.json({
-        liked: false,
-      });
     }
 
-    await pool.query(
+    const count = await pool.query(
       `
-      INSERT INTO post_likes(
-        post_id,
-        user_id
-      )
-      VALUES($1, $2)
+      SELECT COUNT(*) AS likes
+      FROM post_likes
+      WHERE post_id = $1
       `,
-      [
-        req.params.id,
-        req.user.id,
-      ]
+      [req.params.id]
     );
 
     res.json({
-      liked: true,
+      liked,
+      likes: count.rows[0].likes,
     });
   }
 );

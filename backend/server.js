@@ -58,7 +58,7 @@ const pool = new Pool({
    DOSSIER UPLOADS
 ========================================================= */
 
-const uploadDir = path.join(__dirname, "uploads");
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
 
 const imagesDir = path.join(uploadDir, "images");
 
@@ -227,7 +227,7 @@ function checkPassword(password) {
 // Seuls les échecs comptent : une connexion réussie ne consomme rien
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: Number(process.env.LOGIN_RATE_LIMIT) || 10,
   skipSuccessfulRequests: true,
   standardHeaders: "draft-7",
   legacyHeaders: false,
@@ -239,7 +239,7 @@ const loginLimiter = rateLimit({
 // Seuls les comptes réellement créés comptent (pas les erreurs de saisie)
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  limit: 5,
+  limit: Number(process.env.REGISTER_RATE_LIMIT) || 5,
   skipFailedRequests: true,
   standardHeaders: "draft-7",
   legacyHeaders: false,
@@ -2374,4 +2374,10 @@ Status  : ONLINE
   }
 }
 
-startServer();
+// Lancé directement (npm start) : démarre le serveur.
+// Importé (tests) : expose seulement l'application et la connexion.
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, pool };

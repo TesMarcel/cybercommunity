@@ -786,6 +786,17 @@ npm start          # ou : npm run dev (redémarrage automatique)
 
 Le serveur refuse de démarrer si `JWT_SECRET` (32 caractères minimum) ou `DATABASE_URL` sont absents.
 
+## Lancer les tests
+
+Les tests utilisent une **base séparée**, entièrement vidée à chaque lancement. Son nom doit se terminer par `_test` (sinon les tests refusent de démarrer).
+
+```bash
+sudo -iu postgres createdb cyber_community_test   # une seule fois
+# Renseigner TEST_DATABASE_URL dans backend/.env
+cd backend
+npm test
+```
+
 ---
 
 # 26. Ordre de développement

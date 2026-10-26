@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "db:init": "node scripts/db-init.js"
+    "db:init": "node scripts/db-init.js",
+    "test": "node --test --test-concurrency=1 \"test/*.test.js\""
   },
   "engines": {
     "node": ">=18"

@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "db:init": "node scripts/db-init.js",
-    "test": "node --test --test-concurrency=1 \"test/*.test.js\""
+    "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
+    "test:e2e": "node test-e2e/run.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -22,5 +23,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
   }
 }

@@ -159,12 +159,29 @@ router.get(
         r.*,
         u.username AS reporter,
         h.username AS handler,
+        -- Aperçu de l'élément signalé (NULL s'il a été supprimé)
+        -- et contexte pour l'ouvrir : discussion d'un commentaire,
+        -- groupe d'un message
+        COALESCE(tu.username, tp.title, LEFT(tc.content, 200), tg.name, LEFT(tm.content, 200), tm.file_name) AS target_preview,
+        COALESCE(tp.author_id, tc.author_id, tm.sender_id, tu.id) AS target_author_id,
+        tc.post_id AS target_post_id,
+        tm.group_id AS target_group_id,
         COUNT(*) OVER() AS total
       FROM reports r
       JOIN users u
         ON u.id = r.reporter_id
       LEFT JOIN users h
         ON h.id = r.handled_by
+      LEFT JOIN users tu
+        ON r.target_type = 'USER' AND tu.id = r.target_id
+      LEFT JOIN posts tp
+        ON r.target_type = 'POST' AND tp.id = r.target_id
+      LEFT JOIN comments tc
+        ON r.target_type = 'COMMENT' AND tc.id = r.target_id
+      LEFT JOIN groups_table tg
+        ON r.target_type = 'GROUP' AND tg.id = r.target_id
+      LEFT JOIN group_messages tm
+        ON r.target_type = 'MESSAGE' AND tm.id = r.target_id
       WHERE ($1::text IS NULL OR r.status = $1)
       ORDER BY r.created_at DESC
       LIMIT $2 OFFSET $3

@@ -784,6 +784,14 @@ npm run db:init
 npm start          # ou : npm run dev (redémarrage automatique)
 ```
 
+Ouvrir ensuite **http://localhost:5000** dans le navigateur : le serveur fournit à la fois l'application (dossier `frontend/`) et l'API (`/api/...`).
+
+Pour donner le rôle administrateur au premier compte créé :
+
+```bash
+sudo -iu postgres psql -d cyber_community -c "UPDATE users SET role = 'ADMIN' WHERE username = 'VOTRE_NOM';"
+```
+
 Le serveur refuse de démarrer si `JWT_SECRET` (32 caractères minimum) ou `DATABASE_URL` sont absents.
 
 ## Lancer les tests
@@ -796,6 +804,18 @@ sudo -iu postgres createdb cyber_community_test   # une seule fois
 cd backend
 npm test
 ```
+
+### Tests dans le navigateur
+
+Ils pilotent **Firefox** (sans fenêtre) comme un vrai utilisateur : inscription, forum, profil, notifications, groupes, messagerie, modération, affichage mobile, protection XSS. Ils utilisent la même base `_test`.
+
+```bash
+cd backend
+npm run test:e2e               # tous les scénarios
+npm run test:e2e -- 3-groups   # un seul scénario
+```
+
+Firefox est cherché dans `/usr/bin/firefox` ; sinon, définir `FIREFOX_PATH`.
 
 ---
 
@@ -994,7 +1014,7 @@ La partie SQL comprend :
 * [x] Administration (API)
 * [x] Tests (npm test)
 * [ ] WebSocket pour le temps réel
-* [ ] Frontend
+* [x] Frontend (HTML / CSS / JavaScript)
 
 ---
 

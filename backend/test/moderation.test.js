@@ -76,6 +76,13 @@ test("signalements : liste réservée à la modération, filtre et pagination", 
   assert.equal(all.body.total, 3);
   assert.ok(all.body.reports[0].reporter);
 
+  // Aperçu et contexte de la cible
+  const byType = Object.fromEntries(all.body.reports.map((r) => [r.target_type, r]));
+  assert.equal(byType.POST.target_preview, "Pub");
+  assert.equal(byType.POST.target_author_id, eve.id);
+  assert.equal(byType.MESSAGE.target_preview, "secret");
+  assert.ok(byType.MESSAGE.target_group_id);
+
   const pending = await api("GET", "/api/reports?status=PENDING&limit=2", { token: modo.token });
   assert.equal(pending.body.reports.length, 2);
   assert.equal(pending.body.total, 3);
@@ -85,6 +92,15 @@ test("signalements : liste réservée à la modération, filtre et pagination", 
 
 test("signalement : traitement et notification du signaleur", async () => {
   const [r] = await sql("SELECT id FROM reports WHERE reporter_id = $1 AND target_type = 'POST'", [bob.id]);
+
+  // Commentaire signalé : la discussion parente est fournie
+  const [post] = await sql("SELECT id FROM posts WHERE title = 'Pub'");
+  const comment = await api("POST", `/api/posts/${post.id}/comments`, { token: eve.token, body: { content: "lien douteux" } });
+  await report(bob, { target_type: "COMMENT", target_id: comment.body.id, reason: "spam" });
+  const comments = await api("GET", "/api/reports?status=PENDING", { token: modo.token });
+  const commentReport = comments.body.reports.find((x) => x.target_type === "COMMENT");
+  assert.equal(commentReport.target_post_id, post.id);
+  assert.equal(commentReport.target_preview, "lien douteux");
 
   assert.equal((await api("PUT", `/api/reports/${r.id}`, { token: modo.token, body: { status: "REVIEWING" } })).status, 400);
   assert.equal((await api("PUT", "/api/reports/9999", { token: modo.token, body: { status: "RESOLVED" } })).status, 404);
@@ -97,7 +113,6 @@ test("signalement : traitement et notification du signaleur", async () => {
   assert.deepEqual(notifs, [{ type: "REPORT_UPDATE" }]);
 
   // Plus en attente : bob peut signaler à nouveau
-  const [post] = await sql("SELECT id FROM posts WHERE title = 'Pub'");
   assert.equal((await report(bob, { target_type: "POST", target_id: post.id, reason: "toujours là" })).status, 201);
 });
 

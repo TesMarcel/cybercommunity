@@ -58,14 +58,25 @@ cybercommunity/
 │   │   ├── images/          photos de profil (publiques)
 │   │   └── files/           pièces jointes (privées, via GET /api/files/:id)
 │   │
-│   └── test/                npm test (node:test)
+│   ├── test/                npm test (API, node:test)
+│   └── test-e2e/            npm run test:e2e (navigateur Firefox)
 │
-└── frontend/                à réaliser (HTML / CSS / JavaScript)
-    ├── index.html
-    ├── pages/               login, register, profile, forum, groups, notifications
-    ├── css/
-    ├── js/                  api.js + un fichier par page
-    └── assets/
+└── frontend/                servi par Express (même origine que l'API)
+    ├── index.html           redirige vers le forum ou la connexion
+    ├── pages/
+    │   ├── login.html, register.html
+    │   ├── forum.html, post.html             forum et discussion
+    │   ├── profile.html                      son profil ou celui d'un membre (?id=)
+    │   ├── notifications.html
+    │   ├── groups.html, group.html           groupes (discussions, messages, membres)
+    │   └── moderation.html                   signalements, utilisateurs, catégories
+    ├── css/main.css
+    └── js/
+        ├── api.js           appels à l'API, session, téléchargements
+        ├── ui.js            création d'éléments (texte uniquement, jamais de HTML)
+        ├── layout.js        en-tête, navigation, badge de notifications
+        ├── report.js        boîte de dialogue « Signaler »
+        └── <page>.js        un module par page
 ```
 
 ## Choix par rapport au plan initial
@@ -73,3 +84,4 @@ cybercommunity/
 - **Pas de couches controllers / models séparées** : chaque route contient sa validation, sa logique et ses requêtes SQL paramétrées. Pour une API de cette taille, cela évite de multiplier les fichiers sans bénéfice. Les règles partagées (droits sur les groupes, notifications, validations) sont isolées dans `services/` et `utils/`.
 - **Profils et commentaires** sont regroupés avec les utilisateurs et les discussions (`users.routes.js`, `posts.routes.js`).
 - **Pas de dossier `migrations/`** : le schéma est dans `database/database.sql`. Une modification du schéma devra passer par un script de migration dédié.
+- **Frontend sans framework ni outil de build** : modules JavaScript natifs. Aucun style ni script inline, pour respecter la politique CSP du serveur.

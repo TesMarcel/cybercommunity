@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modération — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/moderation.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <h1>Modération</h1>
+    <div id="message" aria-live="polite"></div>
+
+    <section class="card" aria-labelledby="reports-title">
+      <div class="page-title">
+        <h2 id="reports-title">Signalements</h2>
+        <div>
+          <label class="sr-only" for="report-status">Statut</label>
+          <select id="report-status">
+            <option value="PENDING">En attente</option>
+            <option value="REVIEWED">Examinés</option>
+            <option value="RESOLVED">Résolus</option>
+            <option value="REJECTED">Rejetés</option>
+            <option value="">Tous</option>
+          </select>
+        </div>
+      </div>
+      <ul class="post-list" id="reports"></ul>
+      <nav class="pagination" id="reports-pagination" aria-label="Pagination des signalements"></nav>
+    </section>
+
+    <section class="card" aria-labelledby="users-title">
+      <h2 id="users-title">Utilisateurs</h2>
+      <form class="row" id="users-search" role="search">
+        <label class="sr-only" for="users-q">Rechercher un utilisateur</label>
+        <input id="users-q" name="q" type="search" placeholder="Nom d'utilisateur ou pseudo" class="spacer">
+        <button type="submit">Rechercher</button>
+      </form>
+      <ul class="member-list" id="users"></ul>
+      <nav class="pagination" id="users-pagination" aria-label="Pagination des utilisateurs"></nav>
+    </section>
+
+    <section class="card hidden" id="categories-section" aria-labelledby="categories-title">
+      <h2 id="categories-title">Catégories du forum</h2>
+      <form class="row" id="category-form" novalidate>
+        <label class="sr-only" for="category-name">Nouvelle catégorie</label>
+        <input id="category-name" name="name" placeholder="Nouvelle catégorie" maxlength="100" class="spacer">
+        <button class="button-primary" type="submit">Ajouter</button>
+      </form>
+      <ul class="member-list" id="categories"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

@@ -443,6 +443,11 @@ button:disabled {
   margin: 0.5rem 0;
 }
 
+.comment.highlight {
+  border-left-color: var(--warning);
+  background: rgba(210, 153, 34, 0.08);
+}
+
 .comment .comments {
   margin-left: 0.5rem;
 }

@@ -63,14 +63,22 @@ export function formatDate(value) {
 }
 
 // Désactive un bouton pendant une action ; renvoie une fonction pour le réactiver
+// (une liste déroulante est seulement désactivée : changer son texte
+// effacerait ses options)
 export function busy(button, text = "Patientez…") {
+  const isButton = button.tagName === "BUTTON";
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = text;
+
+  if (isButton) {
+    button.textContent = text;
+  }
 
   return () => {
     button.disabled = false;
-    button.textContent = original;
+    if (isButton) {
+      button.textContent = original;
+    }
   };
 }
 

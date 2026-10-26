@@ -20,14 +20,18 @@ Dernière mise à jour : 2026-10-26
 | 4 | Notifications, signalements, modération | ✅ Terminé |
 | 5 | Durcissement : CORS, en-têtes, journaux | ✅ Terminé |
 | 5b | Découpage de `server.js` | ✅ Terminé |
-| 6 | Frontend (6 pages) | ⏳ Prochaine |
-| 7 | Documentation : endpoints, installation, sauvegarde, déploiement | À faire |
+| 6 | Frontend (10 pages) | ✅ Terminé |
+| 7 | Documentation : endpoints, installation, sauvegarde, déploiement | ⏳ Prochaine |
 
 ## Tests automatisés
 
 `cd backend && npm test` — 53 tests, 9 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, fichiers/messagerie, modération/signalements/notifications, sécurité, CORS).
 
-Dernier résultat (2026-10-26, après tâche 5b) : **53 réussis, 0 échec**. Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-26, après tâche 6) : **53 réussis, 0 échec**.
+
+`cd backend && npm run test:e2e` — 85 contrôles dans Firefox, 4 scénarios (`backend/test-e2e/`).
+
+Dernier résultat (2026-10-26) : **85 réussis, 0 échec**, aucune erreur console/CSP. Ces tests ont révélé et fait corriger 3 bugs du frontend (état vide du chat, bouton bloqué après action, liste déroulante vidée). Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -48,10 +52,9 @@ Dernier résultat (2026-10-26, après tâche 5b) : **53 réussis, 0 échec**. Co
 
 ## Problèmes connus
 
-- Aucun frontend.
 - `TRUST_PROXY` non testé automatiquement (nécessite un vrai proxy).
 - Les contenus de groupe (discussions, commentaires) ne peuvent pas être signalés : le schéma n'autorise que USER, POST, COMMENT, GROUP, MESSAGE.
 
 ## Prochaine action
 
-Tâche 6 : frontend HTML/CSS/JS servi par Express, en commençant par `api.js`, connexion/inscription et forum.
+Tâche 7 : documentation des endpoints, procédure de sauvegarde/restauration et guide de déploiement.

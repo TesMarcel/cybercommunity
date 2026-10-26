@@ -294,6 +294,13 @@ async function load() {
     renderPost(data.post);
     renderComments(data.comments);
     commentsSection.classList.remove("hidden");
+
+    // Lien direct vers un commentaire (#comment-12) : on y défile
+    const target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target) {
+      target.classList.add("highlight");
+      target.scrollIntoView({ block: "center" });
+    }
   } catch (error) {
     clear(container);
     commentsSection.classList.add("hidden");

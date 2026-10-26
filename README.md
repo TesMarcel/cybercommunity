@@ -975,8 +975,8 @@ La partie SQL comprend :
 
 À développer ensuite :
 
-* [ ] API REST
-* [ ] Authentification JWT
+* [x] API REST
+* [x] Authentification JWT (limite de tentatives, changement de mot de passe)
 * [ ] Middleware de permissions
 * [ ] Upload sécurisé des fichiers
 * [ ] Validation avancée

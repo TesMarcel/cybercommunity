@@ -4,6 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
 const { Pool, types } = require("pg");
 const multer = require("multer");
 const path = require("path");
@@ -114,65 +116,139 @@ async function checkDatabase() {
    HELPERS
 ========================================================= */
 
+const BCRYPT_ROUNDS = 12;
+
+// Hash utilisé quand le login n'existe pas : bcrypt.compare prend
+// alors le même temps, ce qui empêche de deviner les comptes existants
+const DUMMY_HASH = bcrypt.hashSync("dummy-password", BCRYPT_ROUNDS);
+
+// Empreinte du mot de passe stockée dans le token :
+// changer de mot de passe invalide tous les anciens tokens
+function passwordVersion(passwordHash) {
+  return crypto
+    .createHash("sha256")
+    .update(passwordHash)
+    .digest("hex")
+    .slice(0, 16);
+}
+
 function generateToken(user) {
   return jwt.sign(
     {
       id: user.id,
       username: user.username,
       role: user.role,
+      pv: passwordVersion(user.password_hash),
     },
     JWT_SECRET,
     {
+      algorithm: "HS256",
       expiresIn: "7d",
     }
   );
 }
 
+function publicUser(user) {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    country: user.country,
+    role: user.role,
+  };
+}
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,30}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// bcrypt ignore tout ce qui dépasse 72 octets
+function checkPassword(password) {
+  if (typeof password !== "string" || password.length < 8) {
+    return "Le mot de passe doit contenir au moins 8 caractères";
+  }
+
+  if (Buffer.byteLength(password, "utf8") > 72) {
+    return "Le mot de passe ne doit pas dépasser 72 octets";
+  }
+
+  return null;
+}
+
+// Seuls les échecs comptent : une connexion réussie ne consomme rien
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    message: "Trop de tentatives, réessayez dans 15 minutes",
+  },
+});
+
+// Seuls les comptes réellement créés comptent (pas les erreurs de saisie)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  skipFailedRequests: true,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    message: "Trop d'inscriptions depuis cette adresse, réessayez plus tard",
+  },
+});
+
 async function auth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({
+      message: "Token manquant",
+    });
+  }
+
+  const token = header.split(" ")[1];
+
+  let decoded;
+
   try {
-    const header = req.headers.authorization;
-
-    if (!header || !header.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "Token manquant",
-      });
-    }
-
-    const token = header.split(" ")[1];
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const result = await pool.query(
-      `
-      SELECT id, username, email, country, role, is_active
-      FROM users
-      WHERE id = $1
-      `,
-      [decoded.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        message: "Utilisateur introuvable",
-      });
-    }
-
-    const user = result.rows[0];
-
-    if (!user.is_active) {
-      return res.status(403).json({
-        message: "Compte suspendu",
-      });
-    }
-
-    req.user = user;
-
-    next();
+    decoded = jwt.verify(token, JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
   } catch (error) {
     return res.status(401).json({
       message: "Token invalide ou expiré",
     });
   }
+
+  const result = await pool.query(
+    `
+    SELECT id, username, email, country, role, is_active, password_hash
+    FROM users
+    WHERE id = $1
+    `,
+    [decoded.id]
+  );
+
+  const user = result.rows[0];
+
+  if (!user || decoded.pv !== passwordVersion(user.password_hash)) {
+    return res.status(401).json({
+      message: "Token invalide ou expiré",
+    });
+  }
+
+  if (!user.is_active) {
+    return res.status(403).json({
+      message: "Compte suspendu",
+    });
+  }
+
+  delete user.password_hash;
+
+  req.user = user;
+
+  next();
 }
 
 function adminOnly(req, res, next) {
@@ -239,45 +315,79 @@ app.get("/", (req, res) => {
 POST /api/auth/register
 */
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", registerLimiter, async (req, res) => {
+  const {
+    username,
+    email,
+    password,
+    country,
+  } = req.body;
+
+  if (!username || !email || !password || !country) {
+    return res.status(400).json({
+      message: "Tous les champs sont obligatoires",
+    });
+  }
+
+  if (typeof username !== "string" || !USERNAME_REGEX.test(username)) {
+    return res.status(400).json({
+      message:
+        "Le nom d'utilisateur doit contenir 3 à 30 caractères (lettres, chiffres, _ . -)",
+    });
+  }
+
+  if (
+    typeof email !== "string" ||
+    email.length > 255 ||
+    !EMAIL_REGEX.test(email)
+  ) {
+    return res.status(400).json({
+      message: "Email invalide",
+    });
+  }
+
+  if (typeof country !== "string" || country.trim().length > 100) {
+    return res.status(400).json({
+      message: "Pays invalide",
+    });
+  }
+
+  const passwordError = checkPassword(password);
+
+  if (passwordError) {
+    return res.status(400).json({
+      message: passwordError,
+    });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existing = await pool.query(
+    `
+    SELECT id
+    FROM users
+    WHERE LOWER(username) = LOWER($1) OR LOWER(email) = $2
+    `,
+    [username, normalizedEmail]
+  );
+
+  if (existing.rows.length > 0) {
+    return res.status(409).json({
+      message: "Username ou email déjà utilisé",
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  // Utilisateur et profil créés ensemble, ou pas du tout
+  const client = await pool.connect();
+
+  let user;
+
   try {
-    const {
-      username,
-      email,
-      password,
-      country,
-    } = req.body;
+    await client.query("BEGIN");
 
-    if (!username || !email || !password || !country) {
-      return res.status(400).json({
-        message: "Tous les champs sont obligatoires",
-      });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        message: "Le mot de passe doit contenir au moins 8 caractères",
-      });
-    }
-
-    const existing = await pool.query(
-      `
-      SELECT id
-      FROM users
-      WHERE username = $1 OR email = $2
-      `,
-      [username, email]
-    );
-
-    if (existing.rows.length > 0) {
-      return res.status(409).json({
-        message: "Username ou email déjà utilisé",
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const result = await pool.query(
+    const result = await client.query(
       `
       INSERT INTO users(
         username,
@@ -286,109 +396,163 @@ app.post("/api/auth/register", async (req, res) => {
         country
       )
       VALUES($1, $2, $3, $4)
-      RETURNING id, username, email, country, role, is_active
+      RETURNING id, username, email, country, role, password_hash
       `,
-      [username, email, passwordHash, country]
+      [username, normalizedEmail, passwordHash, country.trim()]
     );
 
-    const user = result.rows[0];
+    user = result.rows[0];
 
-    await pool.query(
+    await client.query(
       `
       INSERT INTO profiles(user_id, country)
       VALUES($1, $2)
       `,
-      [user.id, country]
+      [user.id, country.trim()]
     );
 
-    const token = generateToken(user);
-
-    res.status(201).json({
-      message: "Compte créé",
-      token,
-      user,
-    });
+    await client.query("COMMIT");
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Erreur serveur",
-    });
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
+
+  res.status(201).json({
+    message: "Compte créé",
+    token: generateToken(user),
+    user: publicUser(user),
+  });
 });
 
 /*
 POST /api/auth/login
 */
 
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const {
-      login,
-      password,
-    } = req.body;
+app.post("/api/auth/login", loginLimiter, async (req, res) => {
+  const {
+    login,
+    password,
+  } = req.body;
 
-    if (!login || !password) {
-      return res.status(400).json({
-        message: "Login et mot de passe obligatoires",
-      });
-    }
-
-    const result = await pool.query(
-      `
-      SELECT *
-      FROM users
-      WHERE username = $1
-      OR email = $1
-      `,
-      [login]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        message: "Identifiants incorrects",
-      });
-    }
-
-    const user = result.rows[0];
-
-    if (!user.is_active) {
-      return res.status(403).json({
-        message: "Compte suspendu",
-      });
-    }
-
-    const valid = await bcrypt.compare(
-      password,
-      user.password_hash
-    );
-
-    if (!valid) {
-      return res.status(401).json({
-        message: "Identifiants incorrects",
-      });
-    }
-
-    const token = generateToken(user);
-
-    res.json({
-      message: "Connexion réussie",
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        country: user.country,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Erreur serveur",
+  if (
+    typeof login !== "string" ||
+    typeof password !== "string" ||
+    !login ||
+    !password
+  ) {
+    return res.status(400).json({
+      message: "Login et mot de passe obligatoires",
     });
   }
+
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM users
+    WHERE LOWER(username) = LOWER($1)
+    OR LOWER(email) = LOWER($1)
+    `,
+    [login.trim()]
+  );
+
+  const user = result.rows[0];
+
+  // Le mot de passe est toujours vérifié, même si le compte n'existe pas
+  const valid = await bcrypt.compare(
+    password,
+    user ? user.password_hash : DUMMY_HASH
+  );
+
+  if (!user || !valid) {
+    return res.status(401).json({
+      message: "Identifiants incorrects",
+    });
+  }
+
+  if (!user.is_active) {
+    return res.status(403).json({
+      message: "Compte suspendu",
+    });
+  }
+
+  res.json({
+    message: "Connexion réussie",
+    token: generateToken(user),
+    user: publicUser(user),
+  });
+});
+
+/*
+GET /api/auth/me
+*/
+
+app.get("/api/auth/me", auth, async (req, res) => {
+  res.json(publicUser(req.user));
+});
+
+/*
+PUT /api/auth/password
+*/
+
+app.put("/api/auth/password", auth, loginLimiter, async (req, res) => {
+  const {
+    current_password,
+    new_password,
+  } = req.body;
+
+  if (typeof current_password !== "string" || !current_password) {
+    return res.status(400).json({
+      message: "Mot de passe actuel obligatoire",
+    });
+  }
+
+  const passwordError = checkPassword(new_password);
+
+  if (passwordError) {
+    return res.status(400).json({
+      message: passwordError,
+    });
+  }
+
+  const result = await pool.query(
+    `
+    SELECT password_hash
+    FROM users
+    WHERE id = $1
+    `,
+    [req.user.id]
+  );
+
+  const valid = await bcrypt.compare(
+    current_password,
+    result.rows[0].password_hash
+  );
+
+  if (!valid) {
+    return res.status(401).json({
+      message: "Mot de passe actuel incorrect",
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
+
+  const updated = await pool.query(
+    `
+    UPDATE users
+    SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
+    RETURNING id, username, email, country, role, password_hash
+    `,
+    [passwordHash, req.user.id]
+  );
+
+  // Les anciens tokens deviennent invalides : on en renvoie un nouveau
+  res.json({
+    message: "Mot de passe modifié",
+    token: generateToken(updated.rows[0]),
+  });
 });
 
 /* =========================================================

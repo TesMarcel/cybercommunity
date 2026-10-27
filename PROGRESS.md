@@ -22,6 +22,7 @@ Dernière mise à jour : 2026-10-26
 | 5b | Découpage de `server.js` | ✅ Terminé |
 | 6 | Frontend (10 pages) | ✅ Terminé |
 | 7 | Documentation : endpoints, installation, sauvegarde, déploiement | ✅ Terminé |
+| 8 | Design : `CLAUDE.md`, contraste AA, mouvement réduit, navigation mobile, étiquettes porteuses de sens, cibles tactiles 44 px (vérifié 375/768/1440 px dans Firefox) | ✅ Terminé |
 
 ## Tests automatisés
 

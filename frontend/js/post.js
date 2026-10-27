@@ -63,7 +63,7 @@ function renderPost(post) {
       el(
         "div",
         { class: "meta" },
-        post.category ? el("span", { class: "tag" }, post.category) : null,
+        post.category ? el("span", { class: "tag tag-accent" }, post.category) : null,
         el("span", {}, "par ", el("a", { href: `/pages/profile.html?id=${post.author_id}` }, post.author)),
         el("span", {}, formatDate(post.created_at)),
         edited ? el("span", {}, `(modifié le ${formatDate(post.updated_at)})`) : null

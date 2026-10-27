@@ -9,6 +9,7 @@ const isAdmin = me.role === "ADMIN";
 
 const TYPES = { USER: "Membre", POST: "Discussion", COMMENT: "Commentaire", GROUP: "Groupe", MESSAGE: "Message de groupe" };
 const STATUSES = { PENDING: "En attente", REVIEWED: "Examiné", RESOLVED: "Résolu", REJECTED: "Rejeté" };
+const STATUS_TAGS = { PENDING: "tag-warning", RESOLVED: "tag-success" };
 const ROLES = { USER: "Membre", MODERATOR: "Modérateur", ADMIN: "Administrateur" };
 
 if (!isModerator(me)) {
@@ -116,7 +117,7 @@ function renderReport(report) {
       "div",
       { class: "meta" },
       el("span", { class: "tag" }, TYPES[report.target_type]),
-      el("span", { class: "tag" }, STATUSES[report.status]),
+      el("span", { class: `tag ${STATUS_TAGS[report.status] ?? ""}` }, STATUSES[report.status]),
       el("span", {}, `signalé par ${report.reporter}`),
       el("span", {}, formatDate(report.created_at)),
       report.handler ? el("span", {}, `traité par ${report.handler}`) : null
@@ -208,7 +209,7 @@ function renderUser(user) {
     {},
     el("a", { href: `/pages/profile.html?id=${user.id}` }, user.username),
     el("span", { class: "tag" }, ROLES[user.role]),
-    user.is_active ? null : el("span", { class: "tag button-danger" }, "Suspendu"),
+    user.is_active ? null : el("span", { class: "tag tag-danger" }, "Suspendu"),
     el("span", { class: "spacer" }),
     actions
   );

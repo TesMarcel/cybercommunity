@@ -264,7 +264,7 @@ async function load() {
         {},
         el("h1", {}, profile.username),
         el("span", { class: "tag" }, ROLES[profile.role] ?? profile.role),
-        profile.is_active === false ? el("span", { class: "tag button-danger" }, "Suspendu") : null
+        profile.is_active === false ? el("span", { class: "tag tag-danger" }, "Suspendu") : null
       )
     ),
     profile.biography ? el("p", { class: "content" }, profile.biography) : null,

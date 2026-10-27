@@ -181,6 +181,7 @@ main {
 
 .narrow {
   max-width: 440px;
+  margin-inline: auto;
 }
 
 .page-title {
@@ -279,6 +280,26 @@ textarea[aria-invalid="true"] {
   grid-template-columns: 1fr 200px auto;
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+input[type="file"] {
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+input[type="file"]:hover::file-selector-button {
+  border-color: var(--muted);
 }
 
 /* ---------- Boutons ---------- */
@@ -412,7 +433,27 @@ button:disabled {
   border-radius: 999px;
   border: 1px solid var(--border);
   font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* La couleur porte un sens : catégorie, à traiter, validé, sanction */
+.tag-accent {
   color: var(--accent-hover);
+}
+
+.tag-warning {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.tag-success {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.tag-danger {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .excerpt {
@@ -500,10 +541,30 @@ dialog::backdrop {
     padding: 0.6rem 0.75rem;
   }
 
+  .nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .nav a,
   .nav button {
-    padding: 0.3rem 0.45rem;
-    font-size: 0.9rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  button,
+  .button {
+    min-height: 44px;
+  }
+
+  /* Nom sur sa ligne, actions en dessous : des lignes régulières */
+  .member-list li > .spacer {
+    flex-basis: 100%;
   }
 
   main {
@@ -649,6 +710,10 @@ input[type="checkbox"].checkbox {
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+.member-list select {
+  width: auto;
 }
 
 /* ---------- Mouvement réduit ---------- */

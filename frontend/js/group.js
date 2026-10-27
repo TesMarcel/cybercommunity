@@ -542,8 +542,12 @@ function chatForm() {
     "form",
     { class: "card chat-form", novalidate: true },
     formMessage,
-    el("label", { for: "chat-content" }, "Votre message"),
-    el("textarea", { id: "chat-content", name: "content", maxlength: "5000" }),
+    el(
+      "div",
+      { class: "field" },
+      el("label", { for: "chat-content" }, "Votre message"),
+      el("textarea", { id: "chat-content", name: "content", maxlength: "5000" })
+    ),
     el("div", { class: "field" }, el("label", { for: "chat-file" }, "Pièce jointe (facultative, 10 Mo maximum)"), file),
     el("button", { class: "button-primary", type: "submit" }, "Envoyer")
   );

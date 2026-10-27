@@ -15,6 +15,7 @@
   --link: #58a6ff;
   --danger: #f85149;
   --warning: #d29922;
+  --on-color: #0d1117; /* texte sur fond --accent ou --danger (contraste AA) */
   --radius: 8px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -162,7 +163,7 @@ p {
   margin-left: 0.25rem;
   border-radius: 999px;
   background: var(--danger);
-  color: #fff;
+  color: var(--on-color);
   font-size: 0.75rem;
   font-weight: 700;
   text-align: center;
@@ -312,7 +313,7 @@ button:disabled {
 .button-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-color);
 }
 
 .button-primary:hover {
@@ -648,4 +649,17 @@ input[type="checkbox"].checkbox {
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* ---------- Mouvement réduit ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

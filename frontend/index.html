@@ -3,22 +3,195 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Accueil — Cyber Community</title>
+  <title>Cyber Community — communauté francophone de cybersécurité</title>
+  <meta name="description" content="Cyber Community réunit étudiants, passionnés et professionnels autour de la cybersécurité, de la programmation, de Linux et des CTF : forum, groupes et entraide.">
   <link rel="icon" href="data:,">
+  <link rel="preload" href="/fonts/poppins-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/main.css">
   <script type="module" src="/js/index.js"></script>
 </head>
-<body>
+<body class="landing">
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
   <header class="site-header">
     <div class="inner">
       <a class="brand" href="/">&gt; cyber_community</a>
+      <nav class="landing-nav" aria-label="Sections de la page">
+        <a href="#mission">Mission</a>
+        <a href="#thematiques">Thématiques</a>
+        <a href="#fonctionnement">Fonctionnement</a>
+        <a href="#charte">Charte</a>
+      </nav>
+      <div class="row">
+        <a class="button button-ghost" href="/pages/login.html">Se connecter</a>
+        <a class="button button-primary button-pill" href="/pages/register.html">Rejoindre</a>
+      </div>
     </div>
   </header>
 
   <main id="main">
-    <p class="loading">Chargement…</p>
+    <!-- Présentation -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-inner">
+        <p class="chip">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></svg>
+          Communauté francophone
+        </p>
+        <h1 id="hero-title" class="display">Apprendre la cybersécurité, <span class="accent-text">ensemble.</span></h1>
+        <p class="lead">
+          Cyber Community réunit étudiants, passionnés et professionnels autour de la cybersécurité,
+          de la programmation, de Linux et des CTF. Un espace pour poser ses questions,
+          partager ce qu'on apprend et progresser en équipe.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary button-pill button-large" href="/pages/register.html">
+            Rejoindre la communauté
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="button button-pill button-large" href="/pages/login.html">J'ai déjà un compte</a>
+        </div>
+      </div>
+    </section>
+
+    <ul class="stats" aria-label="La communauté en bref">
+      <li class="stat"><strong>8</strong><span>thématiques</span></li>
+      <li class="stat"><strong>Groupes</strong><span>publics et privés</span></li>
+      <li class="stat"><strong>100 %</strong><span>francophone</span></li>
+    </ul>
+
+    <!-- Mission -->
+    <section id="mission" class="section" aria-labelledby="mission-title">
+      <p class="eyebrow">Notre mission</p>
+      <h2 id="mission-title" class="section-title">Ce que la communauté veut faire</h2>
+      <p class="section-lead">
+        La cybersécurité s'apprend mieux à plusieurs. Cyber Community veut rendre ce savoir accessible
+        à tous les francophones, du premier terminal ouvert jusqu'au métier d'expert.
+      </p>
+
+      <div class="feature-grid">
+        <article class="feature">
+          <span class="feature-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12v14H6a2 2 0 0 0-2 2zm0 0a2 2 0 0 0 2 2h12"/></svg>
+          </span>
+          <h3>Partager le savoir</h3>
+          <p>Rendre les connaissances en sécurité, en programmation et en administration Linux accessibles, en français et sans jargon inutile.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+          </span>
+          <h3>Apprendre par la pratique</h3>
+          <p>Résoudre des CTF, analyser des cas réels, configurer des systèmes : on progresse en faisant, et en expliquant comment on a fait.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+          </span>
+          <h3>Accompagner les débutants</h3>
+          <p>Aucune question n'est trop simple. Les membres expérimentés guident ceux qui commencent, dans une catégorie qui leur est dédiée.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6zM9 12l2 2 4-4"/></svg>
+          </span>
+          <h3>Défendre une sécurité éthique</h3>
+          <p>Apprendre à attaquer pour mieux défendre, toujours dans un cadre légal : environnements d'entraînement, autorisations et divulgation responsable.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Thématiques -->
+    <section id="thematiques" class="section" aria-labelledby="themes-title">
+      <p class="eyebrow">Thématiques</p>
+      <h2 id="themes-title" class="section-title">De quoi parle-t-on ?</h2>
+      <p class="section-lead">Le forum est organisé en huit catégories pour trouver rapidement les bonnes discussions.</p>
+
+      <ul class="topic-grid">
+        <li class="topic"><span class="topic-name">Cybersécurité</span><span class="topic-text">Défense, attaques, outils, bonnes pratiques.</span></li>
+        <li class="topic"><span class="topic-name">Programmation</span><span class="topic-text">Code, scripts, développement sécurisé.</span></li>
+        <li class="topic"><span class="topic-name">Linux</span><span class="topic-text">Ligne de commande, administration, distributions.</span></li>
+        <li class="topic"><span class="topic-name">Réseaux</span><span class="topic-text">Protocoles, configuration, analyse de trafic.</span></li>
+        <li class="topic"><span class="topic-name">CTF</span><span class="topic-text">Challenges, write-ups et entraînement en équipe.</span></li>
+        <li class="topic"><span class="topic-name">Actualités</span><span class="topic-text">Failles, incidents et évolutions du secteur.</span></li>
+        <li class="topic"><span class="topic-name">Débutants</span><span class="topic-text">Premiers pas, ressources et questions de base.</span></li>
+        <li class="topic"><span class="topic-name">Autres</span><span class="topic-text">Carrière, formations, projets et discussions libres.</span></li>
+      </ul>
+    </section>
+
+    <!-- Fonctionnement -->
+    <section id="fonctionnement" class="section" aria-labelledby="how-title">
+      <p class="eyebrow">Fonctionnement</p>
+      <h2 id="how-title" class="section-title">Comment participer</h2>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-number" aria-hidden="true">01</span>
+          <h3>Créez votre compte</h3>
+          <p>Inscription en une minute, puis complétez votre profil : pseudonyme, biographie et compétences.</p>
+        </li>
+        <li class="step">
+          <span class="step-number" aria-hidden="true">02</span>
+          <h3>Échangez sur le forum</h3>
+          <p>Ouvrez une discussion, répondez aux autres membres et valorisez les meilleures contributions.</p>
+        </li>
+        <li class="step">
+          <span class="step-number" aria-hidden="true">03</span>
+          <h3>Rejoignez des groupes</h3>
+          <p>Travaillez en petit comité dans des groupes publics ou privés, avec messagerie et partage de fichiers.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Charte -->
+    <section id="charte" class="section" aria-labelledby="rules-title">
+      <p class="eyebrow">Charte</p>
+      <h2 id="rules-title" class="section-title">Nos règles communes</h2>
+
+      <div class="rules">
+        <p><strong>Respect.</strong> On critique les idées, jamais les personnes.</p>
+        <p><strong>Légalité.</strong> Aucune aide pour attaquer un système sans autorisation.</p>
+        <p><strong>Entraide.</strong> On explique sa démarche, pas seulement la réponse.</p>
+        <p><strong>Modération.</strong> Chaque membre peut signaler un contenu ; les modérateurs veillent au respect de la charte.</p>
+      </div>
+    </section>
+
+    <!-- Appel à l'action -->
+    <section class="cta" aria-labelledby="cta-title">
+      <p class="eyebrow">Prêt à commencer ?</p>
+      <h2 id="cta-title" class="section-title">Rejoignez Cyber Community</h2>
+      <p class="section-lead">Posez votre première question, partagez votre dernier write-up ou aidez quelqu'un à faire ses premiers pas.</p>
+      <a class="button button-primary button-pill button-large" href="/pages/register.html">
+        Créer mon compte
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </section>
   </main>
 
-  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+  <footer class="landing-footer">
+    <div class="footer-inner">
+      <div class="footer-about">
+        <a class="brand" href="/">&gt; cyber_community</a>
+        <p>La communauté francophone pour apprendre et partager la cybersécurité, la programmation, Linux et les CTF.</p>
+      </div>
+      <nav aria-labelledby="footer-community">
+        <h2 id="footer-community" class="footer-title">Communauté</h2>
+        <ul>
+          <li><a href="#mission">Mission</a></li>
+          <li><a href="#thematiques">Thématiques</a></li>
+          <li><a href="#charte">Charte</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="footer-space">
+        <h2 id="footer-space" class="footer-title">Espace membre</h2>
+        <ul>
+          <li><a href="/pages/register.html">Créer un compte</a></li>
+          <li><a href="/pages/login.html">Se connecter</a></li>
+          <li><a href="/pages/forum.html">Forum</a></li>
+          <li><a href="/pages/groups.html">Groupes</a></li>
+        </ul>
+      </nav>
+    </div>
+    <p class="footer-bottom">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</p>
+  </footer>
 </body>
 </html>

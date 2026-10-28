@@ -1,6 +1,6 @@
 # Suivi du projet Cyber Community
 
-Dernière mise à jour : 2026-10-26
+Dernière mise à jour : 2026-10-28
 
 ## Décisions validées
 
@@ -23,16 +23,18 @@ Dernière mise à jour : 2026-10-26
 | 6 | Frontend (10 pages) | ✅ Terminé |
 | 7 | Documentation : endpoints, installation, sauvegarde, déploiement | ✅ Terminé |
 | 8 | Design : `CLAUDE.md`, contraste AA, mouvement réduit, navigation mobile, étiquettes porteuses de sens, cibles tactiles 44 px (vérifié 375/768/1440 px dans Firefox) | ✅ Terminé |
+| 9 | Page d'accueil publique (style vitrine inspiré de safinum.cm) : mission, thématiques, fonctionnement, charte ; thème clair propre à l'accueil, Poppins locale ; membre connecté → forum (vérifié 375/768/1440 px dans Firefox) | ✅ Terminé (branche `tache-9-accueil`) |
+| 10 | Style des pages de l'application aligné sur l'accueil + mode clair/sombre | ⏳ À faire |
 
 ## Tests automatisés
 
 `cd backend && npm test` — 53 tests, 9 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, fichiers/messagerie, modération/signalements/notifications, sécurité, CORS).
 
-Dernier résultat (2026-10-26, après tâche 6) : **53 réussis, 0 échec**.
+Dernier résultat (2026-10-28, après tâche 9) : **53 réussis, 0 échec**.
 
-`cd backend && npm run test:e2e` — 85 contrôles dans Firefox, 4 scénarios (`backend/test-e2e/`).
+`cd backend && npm run test:e2e` — 87 contrôles dans Firefox, 4 scénarios (`backend/test-e2e/`).
 
-Dernier résultat (2026-10-26) : **85 réussis, 0 échec**, aucune erreur console/CSP. Ces tests ont révélé et fait corriger 3 bugs du frontend (état vide du chat, bouton bloqué après action, liste déroulante vidée). Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-28, après tâche 9) : **87 réussis, 0 échec**, aucune erreur console/CSP. Ces tests ont révélé et fait corriger 3 bugs du frontend (état vide du chat, bouton bloqué après action, liste déroulante vidée). Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -60,7 +62,7 @@ Dernier résultat (2026-10-26) : **85 réussis, 0 échec**, aucune erreur consol
 | Critère | État |
 |---|---|
 | Fonctionnalités prévues et confirmées implémentées | ✅ |
-| Frontend communiquant avec le backend | ✅ vérifié dans Firefox (85 contrôles) |
+| Frontend communiquant avec le backend | ✅ vérifié dans Firefox (87 contrôles) |
 | Base fonctionnelle avec son schéma | ✅ `database.sql`, `npm run db:init` |
 | Parcours utilisateur principaux testés | ✅ API (53 tests) + navigateur |
 | Erreurs bloquantes corrigées ou documentées | ✅ |

@@ -2,10 +2,12 @@
 export default async function (t) {
   const { page, check, text, waitText, clickText } = t;
 
-  // 1. Accueil -> connexion
+  // 1. Accueil non connecté : présentation de la communauté
   await page.goto(t.BASE + "/");
-  await page.waitForFunction(() => location.pathname === "/pages/login.html");
-  check("accueil non connecté → page de connexion", true);
+  await waitText("#hero-title", "cybersécurité");
+  check("accueil non connecté → présentation de la communauté", (await page.evaluate(() => location.pathname)) === "/");
+  check("accueil : lien d'inscription", (await page.$("a.button-primary[href='/pages/register.html']")) !== null);
+  await page.screenshot({ path: `${t.SHOTS}/0-accueil.png`, fullPage: true });
 
   // 2. Inscription : erreurs puis succès
   await page.goto(t.BASE + "/pages/register.html");
@@ -32,6 +34,10 @@ export default async function (t) {
   await page.waitForFunction(() => location.pathname === "/pages/forum.html");
   await waitText(".nav", "Déconnexion");
   check("inscription réussie → forum avec navigation", true);
+
+  await page.goto(t.BASE + "/");
+  await page.waitForFunction(() => location.pathname === "/pages/forum.html");
+  check("accueil connecté → forum", true);
 
   await waitText("#posts", "Aucune discussion");
   check("forum vide : message d'état vide", true);

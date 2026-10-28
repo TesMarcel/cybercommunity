@@ -23,6 +23,8 @@ Identité : **terminal sobre, outil pour praticiens**. Lisible, dense sans être
 - **Interdits** : dégradés violets/néon, glassmorphism, `backdrop-filter`, cartes très arrondies empilées partout, ombres colorées, effets « glow » gratuits, emojis décoratifs, illustrations génériques. Pas de style « landing page IA ».
 - Rayons faibles (≤ 8 px), bordures fines plutôt qu'ombres pour séparer les surfaces.
 
+**Exception : la page d'accueil publique** (`frontend/index.html`, classe `body.landing`, section « Page d'accueil » de `main.css`), validée par l'utilisateur le 2026-10-28, adopte un style vitrine inspiré de safinum.cm : thème clair (variables redéfinies sur `.landing`), titres en Poppins (servie depuis `frontend/fonts/`, licence OFL), grille fine en fond, boutons arrondis, cartes à `--radius-lg`, pied de page sombre. Elle garde l'accent vert unique, sans dégradé coloré, ombre ni emoji. Les pages de l'application suivent toujours les règles ci-dessus jusqu'à la tâche 10 (alignement + mode clair/sombre).
+
 ## Design system (`frontend/css/main.css`)
 
 Toutes les valeurs passent par les variables de `:root`. Pas de couleur, taille ou durée en dur dans les règles.

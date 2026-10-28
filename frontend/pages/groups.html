@@ -16,9 +16,13 @@
     </div>
   </header>
 
-  <main id="main">
-    <div class="page-title">
-      <h1>Groupes</h1>
+  <main id="main" class="wide-page">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Groupes</p>
+        <h1>Groupes</h1>
+        <p class="muted">Travaillez en petit comité : discussions, messagerie et partage de fichiers.</p>
+      </div>
       <button class="button-primary hidden" type="button" id="new-group-toggle" aria-expanded="false" aria-controls="new-group">Créer un groupe</button>
     </div>
 
@@ -44,8 +48,15 @@
       </form>
     </section>
 
+    <div class="segmented" role="group" aria-label="Filtrer les groupes" id="group-filter">
+      <button type="button" data-filter="all" aria-pressed="true">Tous</button>
+      <button type="button" data-filter="mine" aria-pressed="false">Mes groupes</button>
+      <button type="button" data-filter="public" aria-pressed="false">Publics</button>
+      <button type="button" data-filter="private" aria-pressed="false">Privés</button>
+    </div>
+
     <div id="message" aria-live="polite"></div>
-    <ul class="post-list" id="groups"></ul>
+    <ul class="group-grid" id="groups"></ul>
   </main>
 
   <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>

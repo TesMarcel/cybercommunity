@@ -27,18 +27,18 @@ Dernière mise à jour : 2026-10-28
 | 10 | Style de l'application aligné sur l'accueil (titres Poppins, boutons en pastille, cartes arrondies, en-tête fixé sur grand écran) + thème clair/sombre (système par défaut, bouton mémorisé, contraste AA vérifié dans les deux thèmes, 375/768/1280 px) | ✅ Terminé (branche `tache-10-theme`) |
 | 11 | Accueil toujours visible (membre connecté : « Mon tableau de bord ») ; tableau de bord après connexion/inscription : chiffres clés (membres, discussions, mes discussions, mes groupes, non lues, signalements pour la modération), profil à compléter, dernières discussions, mes groupes, notifications, thématiques ; sans modification de l'API | ✅ Terminé (branche `tache-11-tableau-de-bord`) |
 | 12 | Éléments communs (`avatar()`, `timeAgo()`, `richText()` avec blocs de code ``` et bouton Copier, `icon()`, en-tête de page, fil d'Ariane) ; forum en deux colonnes (thématiques cliquables, bonnes pratiques), cartes entièrement cliquables avec avatar et compteurs, compteur de résultats, état vide avec action ; discussion : auteur, fil d'Ariane, blocs de code, commentaires avec avatars. Avatars = initiale (l'API ne renvoie pas la photo de l'auteur) | ✅ Terminé (branche `tache-12-forum`) |
-| 13 | Groupes en grille + messagerie en bulles | ⏳ À faire |
+| 13 | Groupes : en-tête de page, filtre (Tous / Mes groupes / Publics / Privés), grille de cartes cliquables (initiale, badge Public/Privé, membres, rôle, Rejoindre). Page d'un groupe : fil d'Ariane, en-tête avec initiale, discussions et commentaires avec avatars et blocs de code, membres avec avatars. Messagerie en bulles (mes messages à droite, regroupement par auteur sous 5 min, séparateurs de jour, pièces jointes en pastille sans emoji, actions au survol/clavier), barre d'envoi compacte (trombone, aperçu du fichier choisi, champ qui grandit, bouton icône sur mobile). `busy()` conserve les icônes des boutons | ✅ Terminé (branche `tache-13-groupes`) |
 | 14 | Profil en onglets, notifications par jour, tableau de bord de modération | ⏳ À faire |
 
 ## Tests automatisés
 
 `cd backend && npm test` — 53 tests, 9 fichiers dans `backend/test/` (auth, limites, utilisateurs, forum, groupes, fichiers/messagerie, modération/signalements/notifications, sécurité, CORS).
 
-Dernier résultat (2026-10-28, après tâche 12) : **53 réussis, 0 échec**.
+Dernier résultat (2026-10-28, après tâche 13) : **53 réussis, 0 échec**.
 
-`cd backend && npm run test:e2e` — 106 contrôles dans Firefox, 4 scénarios (`backend/test-e2e/`).
+`cd backend && npm run test:e2e` — 112 contrôles dans Firefox, 4 scénarios (`backend/test-e2e/`).
 
-Dernier résultat (2026-10-28, après tâche 12) : **106 réussis, 0 échec**, aucune erreur console/CSP. Ces tests ont révélé et fait corriger 3 bugs du frontend (état vide du chat, bouton bloqué après action, liste déroulante vidée). Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
+Dernier résultat (2026-10-28, après tâche 13) : **112 réussis, 0 échec**, aucune erreur console/CSP. Ces tests ont révélé et fait corriger 3 bugs du frontend (état vide du chat, bouton bloqué après action, liste déroulante vidée). Contrôle : un bug introduit volontairement (email non masqué) est bien détecté.
 
 ## Fonctionnalités vérifiées
 
@@ -66,7 +66,7 @@ Dernier résultat (2026-10-28, après tâche 12) : **106 réussis, 0 échec**, a
 | Critère | État |
 |---|---|
 | Fonctionnalités prévues et confirmées implémentées | ✅ |
-| Frontend communiquant avec le backend | ✅ vérifié dans Firefox (106 contrôles) |
+| Frontend communiquant avec le backend | ✅ vérifié dans Firefox (112 contrôles) |
 | Base fonctionnelle avec son schéma | ✅ `database.sql`, `npm run db:init` |
 | Parcours utilisateur principaux testés | ✅ API (53 tests) + navigateur |
 | Erreurs bloquantes corrigées ou documentées | ✅ |

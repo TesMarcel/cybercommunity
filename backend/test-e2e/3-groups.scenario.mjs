@@ -92,9 +92,16 @@ export default async function (t) {
   check("pièce jointe HTML refusée avec message", true);
 
   await (await page.$("#chat-file")).uploadFile(`${t.SHOTS}/rapport.txt`);
+  await waitText(".chat-file-info", "rapport.txt");
+  check("fichier choisi affiché avant l'envoi", true);
   await clickText("#panel-messages button", "Envoyer");
   await waitText(".chat", "rapport.txt");
   check("pièce jointe envoyée et affichée", true);
+  check("messagerie : mes messages en bulles à droite", (await page.$$(".chat-message.mine")).length === 2);
+  check("messagerie : messages consécutifs regroupés", (await page.$$(".chat-message.mine.continued")).length === 1);
+  check("messagerie : séparateur « Aujourd'hui »", (await text(".chat-day"))?.includes("Aujourd'hui"));
+  check("messagerie : barre d'envoi vidée", await page.$eval(".chat-file-info", (n) => n.classList.contains("hidden")));
+  await page.screenshot({ path: `${t.SHOTS}/6-chat-bulles.png` });
 
   // Téléchargement authentifié : même requête que le bouton
   const content = await page.evaluate(async () => {
@@ -134,6 +141,11 @@ export default async function (t) {
   await page.waitForFunction(() => location.pathname === "/pages/groups.html");
   await waitText("#groups", "Non membre");
   check("bob quitte le groupe public", true);
+
+  await page.click("#group-filter button[data-filter='mine']");
+  check("filtre « Mes groupes »", (await text("#groups")).includes("Red Team") && !(await text("#groups")).includes("Débutants"));
+  await page.click("#group-filter button[data-filter='all']");
+  await page.screenshot({ path: `${t.SHOTS}/7-groupes-grille.png` });
 
   // Mobile
   await page.setViewport({ width: 375, height: 760 });

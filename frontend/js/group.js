@@ -2,7 +2,7 @@
 import { api, download } from "./api.js";
 import { isModerator, requireUser } from "./layout.js";
 import { openReport } from "./report.js";
-import { busy, clear, el, formatDate, params, plural, showEmpty, showLoading, showMessage } from "./ui.js";
+import { avatar, busy, clear, el, formatDate, icon, params, plural, richText, showEmpty, showLoading, showMessage, timeAgo } from "./ui.js";
 
 const me = await requireUser("groups");
 
@@ -14,6 +14,10 @@ const head = document.getElementById("group-head");
 const ROLE_LABELS = { ADMIN: "Admin du groupe", MEMBER: "Membre" };
 
 // Extensions acceptées par le serveur pour les pièces jointes
+const PAPERCLIP = "M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5";
+
+const SEND = "M22 2L11 13M22 2l-7 20-4-9-9-4z";
+
 const ACCEPT = ".pdf,.txt,.md,.csv,.log,.json,.png,.jpg,.jpeg,.gif,.webp,.zip,.gz,.tar,.7z,.docx,.xlsx,.pptx,.odt,.ods,.odp,.pcap,.pcapng";
 
 let group;
@@ -45,7 +49,8 @@ function renderHead() {
   head.replaceChildren(
     el(
       "div",
-      { class: "card stack" },
+      { class: "card group-hero" },
+      el("span", { class: "group-initial group-initial-lg", "aria-hidden": "true" }, group.name[0].toUpperCase()),
       el("h1", {}, group.name),
       el(
         "div",
@@ -55,13 +60,14 @@ function renderHead() {
         el("span", {}, `créé par ${group.creator}`),
         group.my_role ? el("span", {}, `Vous : ${ROLE_LABELS[group.my_role]}`) : null
       ),
-      group.description ? el("p", { class: "content" }, group.description) : null,
+      group.description ? el("p", { class: "content muted" }, group.description) : null,
       !canWrite ? el("p", { class: "muted small" }, "Lecture seule : rejoignez le groupe pour participer.") : null,
       actions
     )
   );
 
   document.title = `${group.name} — Cyber Community`;
+  document.getElementById("breadcrumb-group").replaceChildren(el("span", { "aria-hidden": "true" }, "/"), el("span", {}, group.name));
 }
 
 async function join(event) {
@@ -173,10 +179,16 @@ async function loadPosts() {
       list.append(
         el(
           "li",
-          { class: "post-item" },
-          el("h2", {}, el("button", { type: "button", class: "button-link", onclick: () => openPost(post.id) }, post.title)),
-          el("div", { class: "meta" }, el("span", {}, `par ${post.username}`), el("span", {}, formatDate(post.created_at)), el("span", {}, plural(post.comments, "commentaire", "commentaires"))),
-          el("p", { class: "excerpt" }, post.content)
+          { class: "post-item post-card" },
+          avatar(post.username),
+          el(
+            "div",
+            { class: "post-card-body" },
+            el("div", { class: "meta" }, el("strong", {}, post.username), timeAgo(post.created_at)),
+            el("h2", {}, el("button", { type: "button", class: "button-link stretched-link", onclick: () => openPost(post.id) }, post.title)),
+            el("p", { class: "excerpt" }, post.content.replace(/```[\w+#.-]*/g, " ")),
+            el("div", { class: "meta post-card-stats" }, el("span", {}, plural(post.comments, "commentaire", "commentaires")))
+          )
         )
       );
     }
@@ -266,7 +278,7 @@ async function openPost(postId) {
     { class: "card" },
     el("h2", {}, post.title),
     el("div", { class: "meta" }, el("span", {}, formatDate(post.created_at))),
-    el("p", { class: "content" }, post.content),
+    richText(post.content),
     actions
   );
 
@@ -317,8 +329,8 @@ async function openPost(postId) {
     return el(
       "li",
       { class: "comment" },
-      el("div", { class: "meta" }, el("strong", {}, comment.username), el("span", {}, formatDate(comment.created_at))),
-      el("div", { class: "content" }, comment.content),
+      el("div", { class: "comment-head" }, avatar(comment.username, "sm"), el("div", { class: "meta" }, el("strong", {}, comment.username), timeAgo(comment.created_at))),
+      richText(comment.content),
       commentActions,
       children.length ? el("ul", { class: "comments" }, children.map(renderComment)) : null
     );
@@ -408,16 +420,30 @@ let lastId = null;
 let pollTimer = null;
 let chatReady = false;
 
-function renderMessage(msg) {
-  const actions = el("div", { class: "comment-actions" });
+// Regroupement : messages d'un même auteur à moins de 5 minutes d'intervalle
+const GROUP_DELAY = 5 * 60 * 1000;
+let lastRendered = null;
+
+const dayFormat = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const dayKey = (value) => new Date(value).toDateString();
+
+function dayLabel(value) {
+  const days = Math.round((new Date(new Date().toDateString()) - new Date(dayKey(value))) / 86400000);
+  return days === 0 ? "Aujourd'hui" : days === 1 ? "Hier" : dayFormat.format(new Date(value));
+}
+
+function renderMessage(msg, continued) {
+  const mine = msg.sender_id === me.id;
+  const actions = el("div", { class: "chat-actions" });
+  const bubble = el("div", { class: "chat-bubble", title: formatDate(msg.created_at) }, msg.content ? richText(msg.content) : null);
 
   if (msg.file_url) {
-    actions.append(
+    bubble.append(
       el("button", {
         type: "button",
-        class: "button-small",
+        class: "file-chip",
         onclick: () => download(msg.file_url, msg.file_name).catch((error) => showMessage(message, error.message)),
-      }, `📎 ${msg.file_name}`)
+      }, icon(PAPERCLIP), msg.file_name)
     );
   }
 
@@ -430,7 +456,12 @@ function renderMessage(msg) {
           if (!confirm("Supprimer ce message ?")) return;
           try {
             await api.del(`${base}/messages/${msg.id}`);
-            document.getElementById(`msg-${msg.id}`)?.remove();
+            const node = document.getElementById(`msg-${msg.id}`);
+            // Le message suivant reprend l'en-tête (auteur, heure) si besoin
+            if (!node?.classList.contains("continued")) {
+              node?.nextElementSibling?.classList.remove("continued");
+            }
+            node?.remove();
           } catch (error) {
             showMessage(message, error.message);
           }
@@ -439,17 +470,40 @@ function renderMessage(msg) {
     );
   }
 
-  if (msg.sender_id !== me.id) {
+  if (!mine) {
     actions.append(el("button", { type: "button", class: "button-link button-small", onclick: () => openReport("MESSAGE", msg.id) }, "Signaler"));
   }
 
   return el(
     "li",
-    { class: `chat-message${msg.sender_id === me.id ? " mine" : ""}`, id: `msg-${msg.id}` },
-    el("div", { class: "meta" }, el("strong", {}, msg.username), el("span", {}, formatDate(msg.created_at))),
-    msg.content ? el("div", { class: "content" }, msg.content) : null,
-    actions
+    { class: `chat-message${mine ? " mine" : ""}${continued ? " continued" : ""}`, id: `msg-${msg.id}` },
+    mine ? null : avatar(msg.username, "sm"),
+    el(
+      "div",
+      { class: "chat-body" },
+      el("div", { class: "chat-meta" }, mine ? el("span", { class: "sr-only" }, "Vous") : el("strong", {}, msg.username), timeAgo(msg.created_at)),
+      bubble,
+      actions
+    )
   );
+}
+
+// Suite de messages : séparateurs de jour et regroupement par auteur
+function renderBatch(messages, previous) {
+  const nodes = [];
+
+  for (const msg of messages) {
+    if (!previous || dayKey(previous.created_at) !== dayKey(msg.created_at)) {
+      nodes.push(el("li", { class: "chat-day", dataset: { day: dayKey(msg.created_at) } }, el("span", {}, dayLabel(msg.created_at))));
+      previous = null;
+    }
+
+    const continued = Boolean(previous) && previous.sender_id === msg.sender_id && new Date(msg.created_at) - new Date(previous.created_at) < GROUP_DELAY;
+    nodes.push(renderMessage(msg, continued));
+    previous = msg;
+  }
+
+  return nodes;
 }
 
 function appendMessages(messages) {
@@ -460,12 +514,11 @@ function appendMessages(messages) {
   const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
 
   chat.querySelector(".empty")?.remove();
-  chat.append(...messages.map(renderMessage));
+  chat.append(...renderBatch(messages, lastRendered));
+  lastRendered = messages[messages.length - 1];
 
-  if (messages.length) {
-    lastId = messages[messages.length - 1].id;
-    firstId ??= messages[0].id;
-  }
+  lastId = lastRendered.id;
+  firstId ??= messages[0].id;
 
   if (atBottom) {
     chat.scrollTop = chat.scrollHeight;
@@ -522,7 +575,13 @@ async function openChat() {
       if (previous.length) {
         firstId = previous[0].id;
         const height = chat.scrollHeight;
-        chat.prepend(...previous.map(renderMessage));
+        const nodes = renderBatch(previous, null);
+        // Même jour que le premier message déjà affiché : un seul séparateur
+        const firstDay = chat.firstElementChild;
+        if (firstDay?.classList.contains("chat-day") && firstDay.dataset.day === dayKey(previous[previous.length - 1].created_at)) {
+          firstDay.remove();
+        }
+        chat.prepend(...nodes);
         chat.scrollTop = chat.scrollHeight - height;
       }
       done();
@@ -536,21 +595,51 @@ async function openChat() {
 
 function chatForm() {
   const formMessage = el("div", { "aria-live": "polite" });
-  const file = el("input", { id: "chat-file", name: "file", type: "file", accept: ACCEPT });
+  const file = el("input", { id: "chat-file", name: "file", type: "file", accept: ACCEPT, class: "sr-only" });
+  const fileInfo = el("div", { class: "chat-file-info hidden" });
+
+  const showFile = () => {
+    const chosen = file.files[0];
+    fileInfo.classList.toggle("hidden", !chosen);
+    fileInfo.replaceChildren(
+      ...(chosen
+        ? [
+            el("span", { class: "file-chip" }, icon(PAPERCLIP), chosen.name),
+            el("button", { type: "button", class: "button-link button-small", onclick: () => { file.value = ""; showFile(); } }, "Retirer"),
+          ]
+        : [])
+    );
+  };
+
+  file.addEventListener("change", showFile);
 
   const form = el(
     "form",
     { class: "card chat-form", novalidate: true },
     formMessage,
+    fileInfo,
     el(
       "div",
-      { class: "field" },
-      el("label", { for: "chat-content" }, "Votre message"),
-      el("textarea", { id: "chat-content", name: "content", maxlength: "5000" })
+      { class: "chat-composer" },
+      el("label", { class: "button attach-button", title: "Joindre un fichier (10 Mo maximum)" }, icon(PAPERCLIP), el("span", { class: "sr-only" }, "Joindre un fichier (10 Mo maximum)"), file),
+      el("label", { class: "sr-only", for: "chat-content" }, "Votre message"),
+      el("textarea", { id: "chat-content", name: "content", maxlength: "5000", rows: "1", placeholder: "Écrire un message…", "aria-describedby": "chat-hint" }),
+      el("button", { class: "button-primary send-button", type: "submit" }, icon(SEND), el("span", { class: "send-label" }, "Envoyer"))
     ),
-    el("div", { class: "field" }, el("label", { for: "chat-file" }, "Pièce jointe (facultative, 10 Mo maximum)"), file),
-    el("button", { class: "button-primary", type: "submit" }, "Envoyer")
+    el("p", { class: "hint", id: "chat-hint" }, "Entrée pour envoyer, Maj+Entrée pour aller à la ligne. Code entre ```.")
   );
+
+  form.addEventListener("reset", () => setTimeout(() => {
+    showFile();
+    grow();
+  }));
+
+  // Le champ grandit avec le texte (plafond fixé en CSS)
+  const grow = () => {
+    form.content.style.height = "auto";
+    form.content.style.height = `${form.content.scrollHeight + 2}px`;
+  };
+  form.content.addEventListener("input", grow);
 
   // Entrée envoie, Maj+Entrée va à la ligne
   form.content.addEventListener("keydown", (event) => {
@@ -577,7 +666,7 @@ function chatForm() {
     if (content) data.append("content", content);
     if (attachment) data.append("file", attachment);
 
-    const done = busy(form.querySelector("button"), "Envoi…");
+    const done = busy(form.querySelector("button[type=submit]"), "Envoi…");
     try {
       await api.upload(`${base}/messages`, data);
       form.reset();
@@ -638,6 +727,7 @@ async function loadMembers() {
       el(
         "li",
         {},
+        avatar(member.username, "sm"),
         el("a", { href: `/pages/profile.html?id=${member.id}` }, member.username),
         el("span", { class: "tag" }, ROLE_LABELS[member.group_role]),
         el("span", { class: "muted small spacer" }, `depuis le ${formatDate(member.joined_at)}`),

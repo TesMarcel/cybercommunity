@@ -87,7 +87,8 @@ export function timeAgo(value) {
 // effacerait ses options)
 export function busy(button, text = "Patientez…") {
   const isButton = button.tagName === "BUTTON";
-  const original = button.textContent;
+  // Contenu d'origine conservé tel quel (texte et icônes)
+  const original = [...button.childNodes];
   button.disabled = true;
 
   if (isButton) {
@@ -97,7 +98,7 @@ export function busy(button, text = "Patientez…") {
   return () => {
     button.disabled = false;
     if (isButton) {
-      button.textContent = original;
+      button.replaceChildren(...original);
     }
   };
 }

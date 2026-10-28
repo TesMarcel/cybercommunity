@@ -118,6 +118,82 @@ export function pagination(container, { page, limit, total }, onChange) {
   );
 }
 
+// Icône SVG décorative (tracé au format de l'attribut d) ; ICONS : tracés communs
+export const ICONS = {
+  heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z",
+  comment: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  plus: "M12 5v14M5 12h14",
+  code: "M16 18l6-6-6-6M8 6l-6 6 6 6",
+  shield: "M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z",
+};
+
+export function icon(d) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  path.setAttribute("d", d);
+  svg.append(path);
+  return svg;
+}
+
+// Avatar : initiale du pseudo (l'API du forum ne renvoie pas la photo)
+export function avatar(name, size = "") {
+  return el("span", { class: `avatar-initial${size ? ` avatar-${size}` : ""}`, "aria-hidden": "true" }, (name || "?")[0].toUpperCase());
+}
+
+// Texte saisi par un membre : paragraphes, et blocs de code entre ```
+// (```bash en ouverture indique le langage). Tout est inséré en texte.
+export function richText(content) {
+  const root = el("div", { class: "content rich" });
+  const parts = content.split("```");
+
+  // Bloc non refermé : le dernier ``` est du texte ordinaire
+  if (parts.length % 2 === 0) {
+    const rest = parts.pop();
+    parts[parts.length - 1] += `\`\`\`${rest}`;
+  }
+
+  parts.forEach((part, index) => {
+    if (index % 2 === 0) {
+      const text = part.replace(/^\n+|\n+$/g, "");
+      if (text) {
+        root.append(el("p", {}, text));
+      }
+      return;
+    }
+
+    const match = part.match(/^([\w+#.-]*)\n([\s\S]*)$/);
+    const language = match ? match[1] : "";
+    const code = (match ? match[2] : part).replace(/\n$/, "");
+    root.append(codeBlock(code, language));
+  });
+
+  return root;
+}
+
+function codeBlock(code, language) {
+  const copy = el("button", { type: "button", class: "button-link button-small" }, "Copier");
+
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      copy.textContent = "Copié";
+    } catch {
+      copy.textContent = "Copie impossible";
+    }
+    setTimeout(() => (copy.textContent = "Copier"), 1500);
+  });
+
+  return el(
+    "figure",
+    { class: "code-block" },
+    el("figcaption", {}, el("span", {}, language || "code"), copy),
+    el("pre", {}, el("code", {}, code))
+  );
+}
+
 // Bouton clair / sombre (le thème initial est posé par js/theme.js)
 const THEME_ICONS = {
   // Soleil : affiché en mode sombre, propose le mode clair
@@ -137,12 +213,8 @@ function currentTheme() {
 }
 
 export function themeToggle() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("class", "icon");
-  svg.setAttribute("aria-hidden", "true");
-  svg.append(path);
+  const svg = icon("");
+  const path = svg.firstChild;
 
   const button = el("button", { type: "button", class: "theme-toggle" }, svg);
 

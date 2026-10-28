@@ -17,7 +17,10 @@
   </header>
 
   <main id="main">
-    <p><a href="/pages/forum.html">← Retour au forum</a></p>
+    <nav class="breadcrumb" aria-label="Fil d'Ariane">
+      <a href="/pages/forum.html">Forum</a>
+      <span id="breadcrumb-category"></span>
+    </nav>
     <div id="message" aria-live="polite"></div>
     <article id="post"><p class="loading">Chargement…</p></article>
 
@@ -28,7 +31,8 @@
       <form class="card" id="comment-form" novalidate>
         <div id="comment-message" aria-live="polite"></div>
         <label for="comment-content">Ajouter un commentaire</label>
-        <textarea id="comment-content" name="content" required maxlength="5000"></textarea>
+        <textarea id="comment-content" name="content" required maxlength="5000" aria-describedby="comment-hint"></textarea>
+        <p class="hint" id="comment-hint">Code : entourez-le de <code>```</code>.</p>
         <p><button class="button-primary" type="submit">Commenter</button></p>
       </form>
     </section>

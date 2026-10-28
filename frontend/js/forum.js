@@ -1,7 +1,7 @@
 // Forum : liste filtrée et paginée, création de discussion
 import { api } from "./api.js";
 import { requireUser } from "./layout.js";
-import { busy, clear, el, formatDate, pagination, params, plural, showEmpty, showLoading, showMessage } from "./ui.js";
+import { ICONS, avatar, busy, clear, el, icon, pagination, params, plural, showLoading, showMessage, timeAgo } from "./ui.js";
 
 await requireUser("forum");
 
@@ -12,6 +12,7 @@ const filterCategory = document.getElementById("filter-category");
 const newPost = document.getElementById("new-post");
 const newPostForm = document.getElementById("new-post-form");
 const toggle = document.getElementById("new-post-toggle");
+const resultCount = document.getElementById("result-count");
 
 const state = {
   q: params.get("q") || "",
@@ -34,23 +35,78 @@ for (const category of categories) {
 filters.q.value = state.q;
 filterCategory.value = state.category;
 
+// Colonne de droite : mêmes catégories, en liens
+const categoryNav = document.getElementById("category-nav");
+
+function categoryLink(id, name, count) {
+  const link = el(
+    "a",
+    { href: id ? `?category=${id}` : "?", dataset: { category: id } },
+    el("span", {}, name),
+    count === null ? null : el("span", { class: "topic-count" }, count)
+  );
+
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    state.category = id;
+    state.page = 1;
+    filterCategory.value = id;
+    load();
+  });
+
+  return el("li", {}, link);
+}
+
+categoryNav.append(
+  categoryLink("", "Toutes les discussions", null),
+  ...categories.map((category) => categoryLink(String(category.id), category.name, category.posts))
+);
+
+function markActiveCategory() {
+  for (const link of categoryNav.querySelectorAll("a")) {
+    link.setAttribute("aria-current", link.dataset.category === state.category ? "page" : "false");
+  }
+}
+
 // ---------- Liste ----------
 
+// Toute la carte est cliquable (lien du titre étiré), l'auteur reste un lien à part
 function renderPost(post) {
   return el(
     "li",
-    { class: "post-item" },
-    el("h2", {}, el("a", { href: `/pages/post.html?id=${post.id}` }, post.title)),
+    { class: "post-item post-card" },
+    avatar(post.author),
     el(
       "div",
-      { class: "meta" },
-      post.category ? el("span", { class: "tag tag-accent" }, post.category) : null,
-      el("span", {}, "par ", el("a", { href: `/pages/profile.html?id=${post.author_id}` }, post.author)),
-      el("span", {}, formatDate(post.created_at)),
-      el("span", {}, plural(post.likes, "j'aime", "j'aime")),
-      el("span", {}, plural(post.comments, "commentaire", "commentaires"))
-    ),
-    el("p", { class: "excerpt" }, post.content)
+      { class: "post-card-body" },
+      el(
+        "div",
+        { class: "meta" },
+        el("a", { class: "post-card-author", href: `/pages/profile.html?id=${post.author_id}` }, post.author),
+        timeAgo(post.created_at),
+        post.category ? el("span", { class: "tag tag-accent" }, post.category) : null
+      ),
+      el("h2", {}, el("a", { class: "stretched-link", href: `/pages/post.html?id=${post.id}` }, post.title)),
+      // Extrait sans les marqueurs de blocs de code (```bash)
+      el("p", { class: "excerpt" }, post.content.replace(/```[\w+#.-]*/g, " ")),
+      el(
+        "div",
+        { class: "meta post-card-stats" },
+        el("span", {}, icon(ICONS.heart), plural(post.likes, "j'aime", "j'aime")),
+        el("span", {}, icon(ICONS.comment), plural(post.comments, "commentaire", "commentaires"))
+      )
+    )
+  );
+}
+
+function renderEmpty(text, withAction) {
+  return el(
+    "li",
+    { class: "empty empty-state" },
+    el("p", {}, text),
+    withAction
+      ? el("button", { type: "button", class: "button-primary", onclick: () => showForm(true) }, icon(ICONS.plus), "Lancer une discussion")
+      : null
   );
 }
 
@@ -64,6 +120,7 @@ async function load() {
 
   showMessage(listMessage, "");
   showLoading(list);
+  markActiveCategory();
 
   const apiQuery = new URLSearchParams({ page: state.page, limit: 20 });
   if (state.q) apiQuery.set("q", state.q);
@@ -73,9 +130,11 @@ async function load() {
     const data = await api.get(`/api/posts?${apiQuery}`);
 
     clear(list);
+    resultCount.textContent = state.q || state.category ? `${plural(data.total, "discussion trouvée", "discussions trouvées")}` : plural(data.total, "discussion", "discussions");
 
     if (data.posts.length === 0) {
-      showEmpty(list, state.q || state.category ? "Aucune discussion ne correspond à votre recherche." : "Aucune discussion pour le moment. Lancez la première !");
+      const filtered = Boolean(state.q || state.category);
+      list.append(renderEmpty(filtered ? "Aucune discussion ne correspond à votre recherche." : "Aucune discussion pour le moment. Lancez la première !", !filtered));
     } else {
       list.append(...data.posts.map(renderPost));
     }
@@ -87,6 +146,7 @@ async function load() {
     });
   } catch (error) {
     clear(list);
+    resultCount.textContent = "";
     showMessage(listMessage, error.message);
   }
 }

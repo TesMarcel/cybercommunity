@@ -834,6 +834,311 @@ input[type="checkbox"].checkbox {
   width: auto;
 }
 
+/* ---------- Éléments communs : avatar, code, fil d'Ariane ---------- */
+
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--accent-hover);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+}
+
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+}
+
+code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+.rich p {
+  margin: 0 0 0.75rem;
+}
+
+.rich > :last-child {
+  margin-bottom: 0;
+}
+
+.code-block {
+  margin: 0 0 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.code-block figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.4rem 0.2rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 0.85rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.code-block code {
+  padding: 0;
+  background: none;
+  font-size: 0.875rem;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.breadcrumb > span {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.meta > span,
+.meta > time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ---------- Forum (pages/forum.html) ---------- */
+
+main.forum-page,
+body:has(main.forum-page) .site-header .inner {
+  max-width: 1100px;
+}
+
+.forum-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Sur grand écran, la colonne remplace la liste déroulante */
+.forum-page .filters {
+  grid-template-columns: 1fr auto;
+}
+
+.forum-page #filter-category {
+  display: none;
+}
+
+.forum-aside {
+  position: sticky;
+  top: 5rem;
+}
+
+.aside-title {
+  margin-bottom: 0.6rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.category-nav {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.category-nav a:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.category-nav a[aria-current="page"] {
+  background: var(--surface-2);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+.aside-tips {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.aside-tips li + li {
+  margin-top: 0.35rem;
+}
+
+#result-count {
+  margin-bottom: 0.5rem;
+}
+
+/* Carte de discussion entièrement cliquable */
+.post-card {
+  position: relative;
+  display: flex;
+  gap: 0.85rem;
+  transition: border-color var(--duration) var(--ease);
+}
+
+.post-card:hover {
+  border-color: var(--accent);
+}
+
+.post-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-card h2 {
+  margin: 0.2rem 0 0.15rem;
+}
+
+.post-card h2 a {
+  color: var(--text);
+}
+
+.stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.post-card-author {
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+}
+
+.post-card-stats {
+  margin-top: 0.5rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+/* ---------- Discussion (pages/post.html) ---------- */
+
+.post-full h1 {
+  margin: 0.75rem 0 0.5rem;
+}
+
+.post-full .rich {
+  margin: 1rem 0;
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.like-button .icon {
+  color: var(--danger);
+}
+
+.like-button[aria-pressed="true"] .icon {
+  fill: currentColor;
+}
+
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.comment .rich {
+  padding-left: 2.25rem;
+}
+
+.comment .comment-actions {
+  padding-left: 1.75rem;
+}
+
+@media (max-width: 900px) {
+  .forum-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .forum-aside {
+    display: none;
+  }
+
+  .forum-page .filters {
+    grid-template-columns: 1fr 200px auto;
+  }
+
+  .forum-page #filter-category {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .forum-page .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .post-card > .avatar-initial {
+    display: none;
+  }
+
+  .comment .rich,
+  .comment .comment-actions {
+    padding-left: 0;
+  }
+}
+
 /* ---------- Tableau de bord (pages/dashboard.html) ---------- */
 
 main.dashboard,

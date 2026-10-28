@@ -16,46 +16,74 @@
     </div>
   </header>
 
-  <main id="main">
-    <div class="page-title">
-      <h1>Forum</h1>
+  <main id="main" class="forum-page">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Forum</p>
+        <h1>Discussions</h1>
+        <p class="muted">Posez vos questions, partagez vos découvertes et aidez les autres membres.</p>
+      </div>
       <button class="button-primary" type="button" id="new-post-toggle" aria-expanded="false" aria-controls="new-post">Nouvelle discussion</button>
     </div>
 
-    <section class="card hidden" id="new-post" aria-labelledby="new-post-title">
-      <h2 id="new-post-title">Nouvelle discussion</h2>
-      <div id="new-post-message" aria-live="polite"></div>
-      <form id="new-post-form" novalidate>
-        <div class="field">
-          <label for="title">Titre</label>
-          <input id="title" name="title" required maxlength="200">
-        </div>
-        <div class="field">
-          <label for="category">Catégorie</label>
-          <select id="category" name="category"></select>
-        </div>
-        <div class="field">
-          <label for="content">Contenu</label>
-          <textarea id="content" name="content" required maxlength="20000"></textarea>
-        </div>
-        <div class="row">
-          <button class="button-primary" type="submit">Publier</button>
-          <button type="button" id="new-post-cancel">Annuler</button>
-        </div>
-      </form>
-    </section>
+    <div class="forum-layout">
+      <div class="forum-main">
+        <section class="card hidden" id="new-post" aria-labelledby="new-post-title">
+          <h2 id="new-post-title">Nouvelle discussion</h2>
+          <div id="new-post-message" aria-live="polite"></div>
+          <form id="new-post-form" novalidate>
+            <div class="field">
+              <label for="title">Titre</label>
+              <input id="title" name="title" required maxlength="200">
+            </div>
+            <div class="field">
+              <label for="category">Catégorie</label>
+              <select id="category" name="category"></select>
+            </div>
+            <div class="field">
+              <label for="content">Contenu</label>
+              <textarea id="content" name="content" required maxlength="20000" aria-describedby="content-hint"></textarea>
+              <p class="hint" id="content-hint">Pour partager du code, entourez-le de trois accents graves : <code>```</code> sur la ligne d'avant et d'après (par exemple <code>```bash</code>).</p>
+            </div>
+            <div class="row">
+              <button class="button-primary" type="submit">Publier</button>
+              <button type="button" id="new-post-cancel">Annuler</button>
+            </div>
+          </form>
+        </section>
 
-    <form class="filters" id="filters" role="search">
-      <label class="sr-only" for="q">Rechercher</label>
-      <input id="q" name="q" type="search" placeholder="Rechercher dans le forum…">
-      <label class="sr-only" for="filter-category">Catégorie</label>
-      <select id="filter-category" name="category"></select>
-      <button type="submit">Rechercher</button>
-    </form>
+        <form class="filters" id="filters" role="search">
+          <label class="sr-only" for="q">Rechercher</label>
+          <input id="q" name="q" type="search" placeholder="Rechercher dans le forum…">
+          <label class="sr-only" for="filter-category">Catégorie</label>
+          <select id="filter-category" name="category"></select>
+          <button type="submit">Rechercher</button>
+        </form>
 
-    <div id="list-message" aria-live="polite"></div>
-    <ul class="post-list" id="posts"></ul>
-    <nav class="pagination" id="pagination" aria-label="Pagination"></nav>
+        <p class="muted small" id="result-count" aria-live="polite"></p>
+        <div id="list-message" aria-live="polite"></div>
+        <ul class="post-list" id="posts"></ul>
+        <nav class="pagination" id="pagination" aria-label="Pagination"></nav>
+      </div>
+
+      <aside class="forum-aside" aria-label="Thématiques et règles">
+        <nav class="card" aria-labelledby="aside-topics-title">
+          <h2 id="aside-topics-title" class="aside-title">Thématiques</h2>
+          <ul class="category-nav" id="category-nav"></ul>
+        </nav>
+
+        <section class="card" aria-labelledby="aside-rules-title">
+          <h2 id="aside-rules-title" class="aside-title">Bonnes pratiques</h2>
+          <ul class="aside-tips">
+            <li>Un titre précis attire les bonnes réponses.</li>
+            <li>Expliquez ce que vous avez déjà essayé.</li>
+            <li>Partagez le code entre <code>```</code>.</li>
+            <li>Aucune aide pour attaquer un système sans autorisation.</li>
+          </ul>
+          <a class="small" href="/#charte">Lire la charte</a>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>

@@ -2,7 +2,7 @@
 import { api } from "./api.js";
 import { isModerator, requireUser } from "./layout.js";
 import { openReport } from "./report.js";
-import { busy, clear, el, formatDate, params, plural, showMessage } from "./ui.js";
+import { ICONS, avatar, busy, clear, el, formatDate, icon, params, plural, richText, showMessage, timeAgo } from "./ui.js";
 
 const user = await requireUser("forum");
 
@@ -20,10 +20,12 @@ let categories = null;
 // ---------- Discussion ----------
 
 function renderPost(post) {
+  const likeCount = el("span", {}, plural(post.likes, "j'aime", "j'aime"));
   const likeButton = el(
     "button",
     { type: "button", class: "like-button", "aria-pressed": String(post.liked_by_me) },
-    plural(post.likes, "j'aime", "j'aime")
+    icon(ICONS.heart),
+    likeCount
   );
 
   likeButton.addEventListener("click", async () => {
@@ -31,7 +33,7 @@ function renderPost(post) {
     try {
       const result = await api.post(`/api/posts/${post.id}/like`);
       likeButton.setAttribute("aria-pressed", String(result.liked));
-      likeButton.textContent = plural(result.likes, "j'aime", "j'aime");
+      likeCount.textContent = plural(result.likes, "j'aime", "j'aime");
     } catch (error) {
       showMessage(message, error.message);
     } finally {
@@ -58,19 +60,29 @@ function renderPost(post) {
   container.replaceChildren(
     el(
       "div",
-      { class: "card" },
-      el("h1", {}, post.title),
+      { class: "card post-full" },
       el(
         "div",
-        { class: "meta" },
-        post.category ? el("span", { class: "tag tag-accent" }, post.category) : null,
-        el("span", {}, "par ", el("a", { href: `/pages/profile.html?id=${post.author_id}` }, post.author)),
-        el("span", {}, formatDate(post.created_at)),
-        edited ? el("span", {}, `(modifié le ${formatDate(post.updated_at)})`) : null
+        { class: "post-author" },
+        avatar(post.author, "lg"),
+        el(
+          "div",
+          { class: "meta" },
+          el("a", { class: "post-card-author", href: `/pages/profile.html?id=${post.author_id}` }, post.author),
+          timeAgo(post.created_at),
+          edited ? el("span", {}, `(modifié le ${formatDate(post.updated_at)})`) : null
+        )
       ),
-      el("div", { class: "content stack" }, el("p", {}, post.content)),
+      el("h1", {}, post.title),
+      post.category ? el("p", {}, el("span", { class: "tag tag-accent" }, post.category)) : null,
+      richText(post.content),
       actions
     )
+  );
+
+  // Fil d'Ariane : Forum / catégorie (lien filtré)
+  document.getElementById("breadcrumb-category").replaceChildren(
+    ...(post.category ? [el("span", { "aria-hidden": "true" }, "/"), el("a", { href: `/pages/forum.html?category=${post.category_id}` }, post.category)] : [])
   );
 
   document.title = `${post.title} — Cyber Community`;
@@ -174,13 +186,18 @@ function commentForm_(placeholderLabel, onSubmit, initial = "") {
 }
 
 function renderComment(comment, children) {
-  const body = el("div", { class: "content" }, comment.content);
+  const body = richText(comment.content);
   const actions = el("div", { class: "comment-actions" });
 
   const item = el(
     "li",
     { class: "comment", id: `comment-${comment.id}` },
-    el("div", { class: "meta" }, el("a", { href: `/pages/profile.html?id=${comment.author_id}` }, el("strong", {}, comment.username)), el("span", {}, formatDate(comment.created_at))),
+    el(
+      "div",
+      { class: "comment-head" },
+      avatar(comment.username, "sm"),
+      el("div", { class: "meta" }, el("a", { href: `/pages/profile.html?id=${comment.author_id}` }, el("strong", {}, comment.username)), timeAgo(comment.created_at))
+    ),
     body,
     actions
   );

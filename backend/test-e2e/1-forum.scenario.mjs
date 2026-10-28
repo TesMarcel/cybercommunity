@@ -122,7 +122,7 @@ export default async function (t) {
   // 7. Liste, recherche, filtre
   await page.goto(t.BASE + "/pages/forum.html");
   await waitText("#posts", "Titre corrigé");
-  check("liste : discussion présente avec compteurs", (await text("#posts .meta"))?.includes("2 commentaires"), await text("#posts .meta"));
+  check("liste : discussion présente avec compteurs", (await text("#posts .post-card-stats"))?.includes("2 commentaires"), await text("#posts .post-card-stats"));
 
   // Thème : le bouton bascule, le choix survit au rechargement
   const theme = () => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
@@ -202,6 +202,33 @@ export default async function (t) {
   await page.click("dialog button[type=submit]");
   await waitText("dialog", "Signalement envoyé");
   check("signalement envoyé depuis la boîte de dialogue", true);
+
+  // 10b. Blocs de code et navigation par thématique
+  await page.goto(t.BASE + "/pages/forum.html?new=1");
+  await page.waitForSelector("#new-post:not(.hidden)");
+  await page.type("#title", "Lister les fichiers");
+  await page.select("#category", "3");
+  await page.type("#content", "Avant\n```bash\nls -la <b>\n```\nAprès");
+  await page.click("#new-post-form button[type=submit]");
+  await page.waitForSelector("#post .code-block");
+  check("bloc de code : contenu affiché tel quel", (await text("#post .code-block code")) === "ls -la <b>", await text("#post .code-block code"));
+  check("bloc de code : langage indiqué", (await text("#post .code-block figcaption"))?.includes("bash"));
+  check("bloc de code : aucune balise injectée", (await page.$$("#post b")).length === 0);
+  check("fil d'Ariane : lien vers la thématique", (await page.$("#breadcrumb-category a[href='/pages/forum.html?category=3']")) !== null);
+  await page.screenshot({ path: `${t.SHOTS}/2-discussion-code.png`, fullPage: true });
+
+  await page.goto(t.BASE + "/pages/forum.html");
+  await waitText("#posts", "Lister les fichiers");
+  await page.click("#category-nav a[data-category='3']");
+  await page.waitForSelector("#category-nav a[data-category='3'][aria-current='page']");
+  await waitText("#result-count", "trouvée");
+  check("colonne thématiques : filtre et compteur", page.url().includes("category=3"), page.url());
+  check("extrait sans marqueurs de code", !(await text("#posts"))?.includes("```"));
+  await page.screenshot({ path: `${t.SHOTS}/1-forum-colonnes.png` });
+
+  await page.click("#posts .post-card .excerpt");
+  await page.waitForFunction(() => location.pathname === "/pages/post.html");
+  check("carte de discussion entièrement cliquable", true);
 
   // 11. Mobile
   await page.setViewport({ width: 375, height: 760 });

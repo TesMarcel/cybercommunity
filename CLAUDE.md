@@ -38,7 +38,7 @@ Toutes les valeurs passent par les variables de `:root`. Pas de couleur, taille 
 
 À introduire au besoin, en complétant `:root` plutôt qu'en dupliquant : `--space-1…6` (échelle 4 px), `--shadow-1/2` (profondeur : fond → surface → surface-2 → dialog).
 
-- **Réutiliser** les classes existantes avant d'en créer : `.card`, `.stack`, `.row`, `.page-title`, `.field`, `.hint`, `.button` / `.button-primary` / `.button-danger` / `.button-link` / `.button-small`, `.alert-error` / `.alert-success`, `.loading`, `.empty`, `.tag`, `.meta`, `.badge`, `.pagination`, `.sr-only`, `.hidden`.
+- **Réutiliser** les fonctions de `js/ui.js` (`avatar()`, `timeAgo()`, `richText()` pour tout contenu saisi par un membre, `icon(ICONS.…)`) et les classes existantes avant d'en créer : `.page-head`, `.eyebrow`, `.card-head`, `.breadcrumb`, `.avatar-initial`, `.code-block`, `.empty-state`, `.card`, `.stack`, `.row`, `.page-title`, `.field`, `.hint`, `.button` / `.button-primary` / `.button-danger` / `.button-link` / `.button-small`, `.alert-error` / `.alert-success`, `.loading`, `.empty`, `.tag`, `.meta`, `.badge`, `.pagination`, `.sr-only`, `.hidden`.
 - Garder la structure du fichier par sections commentées (`/* ---------- Section ---------- */`) ; ajouter une section par composant/page.
 - En-tête (`.site-header`, généré par `js/layout.js`) et pied de page identiques sur toutes les pages.
 

@@ -62,9 +62,11 @@ cybercommunity/
 │   └── test-e2e/            npm run test:e2e (navigateur Firefox)
 │
 └── frontend/                servi par Express (même origine que l'API)
-    ├── index.html           redirige vers le forum ou la connexion
+    ├── index.html           accueil public (présentation de la communauté)
+    ├── fonts/               Poppins (titres), licence OFL
     ├── pages/
     │   ├── login.html, register.html
+    │   ├── dashboard.html                    tableau de bord après connexion
     │   ├── forum.html, post.html             forum et discussion
     │   ├── profile.html                      son profil ou celui d'un membre (?id=)
     │   ├── notifications.html
@@ -73,7 +75,8 @@ cybercommunity/
     ├── css/main.css
     └── js/
         ├── api.js           appels à l'API, session, téléchargements
-        ├── ui.js            création d'éléments (texte uniquement, jamais de HTML)
+        ├── theme.js         thème clair/sombre appliqué avant affichage (script classique)
+        ├── ui.js            création d'éléments (texte uniquement, jamais de HTML), bouton de thème, dates relatives
         ├── layout.js        en-tête, navigation, badge de notifications
         ├── report.js        boîte de dialogue « Signaler »
         └── <page>.js        un module par page

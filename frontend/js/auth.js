@@ -6,10 +6,10 @@ document.querySelector(".site-header .inner").append(themeToggle());
 
 const message = document.getElementById("message");
 
-// Après connexion : page demandée (même site uniquement) ou forum
+// Après connexion : page demandée (même site uniquement) ou tableau de bord
 function redirectAfterLogin() {
   const next = params.get("next");
-  location.href = next && next.startsWith("/") && !next.startsWith("//") ? next : "/pages/forum.html";
+  location.href = next && next.startsWith("/") && !next.startsWith("//") ? next : "/pages/dashboard.html";
 }
 
 // Déjà connecté : inutile de rester ici
@@ -83,7 +83,7 @@ registerForm?.addEventListener("submit", async (event) => {
       { auth: false }
     );
     session.save(data.token, data.user);
-    location.href = "/pages/forum.html";
+    location.href = "/pages/dashboard.html";
   } catch (error) {
     showMessage(message, error.message);
     done();

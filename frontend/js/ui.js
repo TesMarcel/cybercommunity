@@ -62,6 +62,26 @@ export function formatDate(value) {
   return dateFormat.format(new Date(value));
 }
 
+const relativeFormat = new Intl.RelativeTimeFormat("fr-FR", { numeric: "auto" });
+
+const RELATIVE_STEPS = [
+  ["year", 31536000],
+  ["month", 2592000],
+  ["week", 604800],
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+// « il y a 2 heures », date complète au survol
+export function timeAgo(value) {
+  const seconds = (new Date(value) - Date.now()) / 1000;
+  const [unit, size] = RELATIVE_STEPS.find(([, size]) => Math.abs(seconds) >= size) || [];
+  const text = unit ? relativeFormat.format(Math.round(seconds / size), unit) : "à l'instant";
+
+  return el("time", { datetime: new Date(value).toISOString(), title: formatDate(value) }, text);
+}
+
 // Désactive un bouton pendant une action ; renvoie une fonction pour le réactiver
 // (une liste déroulante est seulement désactivée : changer son texte
 // effacerait ses options)

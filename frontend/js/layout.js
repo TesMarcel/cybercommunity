@@ -3,6 +3,7 @@ import { api, session, goToLogin } from "./api.js";
 import { el, themeToggle } from "./ui.js";
 
 const LINKS = [
+  ["dashboard", "/pages/dashboard.html", "Tableau de bord"],
   ["forum", "/pages/forum.html", "Forum"],
   ["groups", "/pages/groups.html", "Groupes"],
   ["notifications", "/pages/notifications.html", "Notifications"],
@@ -73,7 +74,7 @@ function renderHeader(user, active) {
   );
 
   header.replaceChildren(
-    el("a", { class: "brand", href: "/pages/forum.html" }, "> cyber_community"),
+    el("a", { class: "brand", href: "/pages/dashboard.html" }, "> cyber_community"),
     el("nav", { class: "nav", "aria-label": "Navigation principale" }, links),
     themeToggle()
   );

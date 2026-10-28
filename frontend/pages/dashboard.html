@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tableau de bord — Cyber Community</title>
+  <link rel="icon" href="data:,">
+  <script src="/js/theme.js"></script>
+  <link rel="stylesheet" href="/css/main.css">
+  <script type="module" src="/js/dashboard.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/">&gt; cyber_community</a>
+    </div>
+  </header>
+
+  <main id="main" class="dashboard">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tableau de bord</p>
+        <h1 id="welcome">Bienvenue</h1>
+        <p class="muted">Voici ce qui se passe dans la communauté.</p>
+      </div>
+      <div class="row">
+        <a class="button" href="/pages/groups.html">Explorer les groupes</a>
+        <a class="button button-primary" href="/pages/forum.html?new=1">Nouvelle discussion</a>
+      </div>
+    </div>
+
+    <ul class="dash-stats" id="stats" aria-label="Chiffres clés"></ul>
+
+    <section class="card profile-progress hidden" id="profile-progress" aria-labelledby="progress-title"></section>
+
+    <div class="dash-grid">
+      <section class="card" aria-labelledby="latest-title">
+        <div class="card-head">
+          <h2 id="latest-title">Dernières discussions</h2>
+          <a href="/pages/forum.html">Tout le forum</a>
+        </div>
+        <ul class="dash-list" id="latest-posts"></ul>
+      </section>
+
+      <div class="dash-side">
+        <section class="card" aria-labelledby="groups-title">
+          <div class="card-head">
+            <h2 id="groups-title">Mes groupes</h2>
+            <a href="/pages/groups.html">Tous les groupes</a>
+          </div>
+          <ul class="dash-list" id="my-groups"></ul>
+        </section>
+
+        <section class="card" aria-labelledby="notifications-title">
+          <div class="card-head">
+            <h2 id="notifications-title">Notifications</h2>
+            <a href="/pages/notifications.html">Tout voir</a>
+          </div>
+          <ul class="dash-list" id="latest-notifications"></ul>
+        </section>
+      </div>
+    </div>
+
+    <section class="card" aria-labelledby="topics-title">
+      <div class="card-head">
+        <h2 id="topics-title">Thématiques du forum</h2>
+      </div>
+      <ul class="topic-chips" id="topics"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">Cyber Community — communauté cybersécurité, programmation, Linux et CTF</footer>
+</body>
+</html>

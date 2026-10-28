@@ -31,14 +31,33 @@ export default async function (t) {
   await page.$eval("#confirm", (n) => (n.value = ""));
   await page.type("#confirm", "motdepasse1");
   await page.click("button[type=submit]");
-  await page.waitForFunction(() => location.pathname === "/pages/forum.html");
+  await page.waitForFunction(() => location.pathname === "/pages/dashboard.html");
   await waitText(".nav", "Déconnexion");
-  check("inscription réussie → forum avec navigation", true);
+  check("inscription réussie → tableau de bord avec navigation", true);
 
+  // Tableau de bord d'un nouveau membre
+  await waitText("#welcome", "Bonjour, tess");
+  check("tableau de bord : accueil personnalisé", true);
+  await waitText("#latest-posts", "Aucune discussion");
+  check("tableau de bord : état vide des discussions", true);
+  await waitText("#my-groups", "aucun groupe");
+  check("tableau de bord : aucun groupe, lien vers les groupes", (await page.$("#my-groups a[href='/pages/groups.html']")) !== null);
+  check("tableau de bord : chiffres clés", (await text("#stats"))?.includes("Membres"), await text("#stats"));
+  check("tableau de bord : profil à compléter", (await page.$("#profile-progress:not(.hidden)")) !== null);
+  await page.screenshot({ path: `${t.SHOTS}/0-tableau-de-bord.png`, fullPage: true });
+
+  // Accueil toujours visible, avec un lien vers le tableau de bord
   await page.goto(t.BASE + "/");
-  await page.waitForFunction(() => location.pathname === "/pages/forum.html");
-  check("accueil connecté → forum", true);
+  await waitText(".site-header", "Mon tableau de bord");
+  check("accueil connecté : reste sur l'accueil", (await page.evaluate(() => location.pathname)) === "/");
+  check("accueil connecté : plus de bouton « J'ai déjà un compte »", !(await text("#main"))?.includes("J'ai déjà un compte"));
 
+  // « Nouvelle discussion » du tableau de bord ouvre directement le formulaire
+  await page.goto(t.BASE + "/pages/forum.html?new=1");
+  await page.waitForSelector("#new-post:not(.hidden)");
+  check("forum ?new=1 : formulaire ouvert", true);
+
+  await page.goto(t.BASE + "/pages/forum.html");
   await waitText("#posts", "Aucune discussion");
   check("forum vide : message d'état vide", true);
   await page.screenshot({ path: `${t.SHOTS}/1-forum-vide.png` });
@@ -129,6 +148,19 @@ export default async function (t) {
   await page.select("#filter-category", "3");
   await waitText("#posts", "Titre corrigé");
   check("filtre par catégorie", true);
+
+  // Le tableau de bord reflète l'activité
+  await page.goto(t.BASE + "/pages/dashboard.html");
+  await waitText("#latest-posts", "Titre corrigé");
+  check("tableau de bord : dernière discussion listée", true);
+  await page.screenshot({ path: `${t.SHOTS}/1-tableau-de-bord.png`, fullPage: true });
+
+  await page.setViewport({ width: 375, height: 800 });
+  await page.reload();
+  await waitText("#latest-posts", "Titre corrigé");
+  check("tableau de bord mobile : pas de défilement horizontal", await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.screenshot({ path: `${t.SHOTS}/1-tableau-de-bord-mobile.png`, fullPage: true });
+  await page.setViewport({ width: 1200, height: 900 });
 
   // 8. Déconnexion / reconnexion avec retour à la page demandée
   await page.evaluate(() => [...document.querySelectorAll(".nav button")].find((b) => b.textContent === "Déconnexion").click());

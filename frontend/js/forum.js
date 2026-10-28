@@ -114,6 +114,11 @@ function showForm(visible) {
 toggle.addEventListener("click", () => showForm(newPost.classList.contains("hidden")));
 document.getElementById("new-post-cancel").addEventListener("click", () => showForm(false));
 
+// Lien « Nouvelle discussion » du tableau de bord
+if (params.get("new") === "1") {
+  showForm(true);
+}
+
 newPostForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("new-post-message");

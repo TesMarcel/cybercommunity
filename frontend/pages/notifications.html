@@ -17,15 +17,19 @@
   </header>
 
   <main id="main">
-    <div class="page-title">
-      <h1>Notifications</h1>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Notifications</p>
+        <h1>Notifications</h1>
+        <p class="muted" id="unread-summary">Réponses, commentaires, groupes et signalements.</p>
+      </div>
       <div class="row">
         <label class="row small"><input type="checkbox" id="unread-only" class="checkbox"> Non lues uniquement</label>
         <button type="button" id="read-all">Tout marquer comme lu</button>
       </div>
     </div>
     <div id="message" aria-live="polite"></div>
-    <ul class="post-list" id="notifications"></ul>
+    <div id="notifications"></div>
     <nav class="pagination" id="pagination" aria-label="Pagination"></nav>
   </main>
 

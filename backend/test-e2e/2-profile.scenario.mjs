@@ -14,6 +14,9 @@ export default async function (t) {
   await page.goto(t.BASE + "/pages/profile.html");
   await waitText("#profile h1", "tess");
   check("mon profil : email visible", (await text(".details"))?.includes("tess@test.fr"));
+  check("mon profil : onglet Aperçu ouvert par défaut", (await page.$("#panel-edit.hidden")) !== null && (await page.$("#panel-overview:not(.hidden)")) !== null);
+  await page.click("#tab-edit");
+  await page.waitForSelector("#panel-edit:not(.hidden)");
   await page.type("#f-pseudonym", "Tess");
   await page.type("#f-skills", "Linux, Python");
   await page.type("#f-biography", "Analyste SOC.\n<b>pas du gras</b>");
@@ -21,11 +24,14 @@ export default async function (t) {
   await waitText("#message", "Profil enregistré");
   check("profil enregistré et affiché", (await text(".details"))?.includes("Linux, Python"));
   check("biographie affichée comme texte", (await page.$$("#profile .content b")).length === 0);
+  check("après enregistrement : retour à l'aperçu", (await page.$("#panel-overview:not(.hidden)")) !== null);
+  check("compétences en étiquettes", (await page.$$(".skill-list li")).length === 2);
 
   // Photo : refus d'un faux fichier puis envoi d'une vraie image
   writeFileSync(`${t.SHOTS}/faux.png`, "<html>pas une image</html>");
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC", "base64");
   writeFileSync(`${t.SHOTS}/ok.png`, png);
+  await page.click("#tab-photo");
   const input = await page.$("#photo");
   await input.uploadFile(`${t.SHOTS}/faux.png`);
   await clickText("#profile form button", "Envoyer la photo");
@@ -38,6 +44,8 @@ export default async function (t) {
   check("photo affichée", loaded);
 
   // Mot de passe : erreurs puis succès, la session continue
+  await page.click("#tab-security");
+  await page.waitForSelector("#panel-security:not(.hidden)");
   await page.type("#current", "motdepasse1");
   await page.type("#next", "court");
   await page.type("#confirm", "court");
@@ -83,6 +91,9 @@ export default async function (t) {
   check("badge : 3 non lues", true);
   await waitText("#notifications", "a commenté votre discussion");
   check("notifications listées", (await page.$$("#notifications li")).length === 3);
+  check("notifications regroupées : « Aujourd'hui »", (await text("#notifications .notif-group h2")) === "Aujourd'hui");
+  check("notifications : une icône par notification", (await page.$$("#notifications .notif-icon svg")).length === 3);
+  check("notifications : résumé des non lues", (await text("#unread-summary"))?.includes("3 notifications non lues"), await text("#unread-summary"));
 
   await clickText("#notifications button", "Marquer comme lue");
   await page.waitForFunction(() => document.getElementById("notif-badge").textContent === "2");

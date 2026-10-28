@@ -692,11 +692,91 @@ dialog::backdrop {
 
 /* ---------- Profil ---------- */
 
-.profile-head {
+/* En-tête : bannière à motif de grille, photo qui la chevauche, chiffres */
+.profile-hero {
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile-cover {
+  height: 120px;
+  background-color: var(--surface-2);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-identity {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  padding: 0 1.5rem 1.25rem;
+}
+
+.profile-identity .avatar {
+  margin-top: -48px;
+  border: 4px solid var(--surface);
+}
+
+.profile-name h1 {
+  margin: 0 0 0.35rem;
+}
+
+.profile-actions {
+  margin-left: auto;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.profile-stats li {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 0.1rem;
+  padding: 0.9rem 0.5rem;
+  text-align: center;
+}
+
+.profile-stats li + li {
+  border-left: 1px solid var(--border);
+}
+
+.profile-stats strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.profile-stats span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 1rem;
+  align-items: start;
+}
+
+.skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
 }
 
 .avatar {
@@ -712,9 +792,24 @@ dialog::backdrop {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--mono);
+  font-family: var(--font-display);
   font-size: 2.5rem;
+  font-weight: 600;
   color: var(--accent-hover);
+}
+
+@media (max-width: 760px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    margin-left: 0;
+  }
+
+  .profile-identity {
+    padding: 0 1rem 1rem;
+  }
 }
 
 .details {
@@ -760,6 +855,30 @@ dialog::backdrop {
 
 .notification .text {
   flex: 1 1 240px;
+}
+
+.notif-group + .notif-group {
+  margin-top: 1.25rem;
+}
+
+.notif-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.notification.unread .notif-icon {
+  color: var(--accent-hover);
+}
+
+.notification.unread .text > div:first-of-type {
+  font-weight: 600;
 }
 
 input[type="checkbox"].checkbox {
@@ -1500,10 +1619,27 @@ body:has(main.dashboard) .site-header .inner {
   transition: border-color var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
 
-a.dash-stat:hover {
+a.dash-stat:hover,
+button.dash-stat:hover {
   border-color: var(--accent);
   text-decoration: none;
   transform: translateY(-2px);
+}
+
+/* Chiffre cliquable qui sert de filtre (modération) */
+button.dash-stat {
+  width: 100%;
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font-weight: 400;
+  text-align: left;
+}
+
+button.dash-stat[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-2);
 }
 
 .dash-stat strong {

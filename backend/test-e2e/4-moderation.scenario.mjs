@@ -57,6 +57,17 @@ export default async function (t) {
   await clickText("#reports button", "Marquer rejeté");
   await waitText("#reports", "Aucun signalement en attente");
   check("signalement rejeté", true);
+
+  // Chiffres clés : à jour et cliquables comme filtre
+  await page.waitForFunction(() => document.getElementById("mod-stats").textContent.includes("0En attente"));
+  const stats = await text("#mod-stats");
+  check("modération : chiffres par statut", stats.includes("1Résolus") && stats.includes("1Rejetés"), stats);
+  await page.evaluate(() => [...document.querySelectorAll("#mod-stats button")].find((b) => b.textContent.includes("Résolus")).click());
+  await waitText("#reports", "Élément déjà supprimé");
+  check("modération : un chiffre filtre la liste", (await page.$eval("#report-status", (n) => n.value)) === "RESOLVED");
+  await page.screenshot({ path: `${t.SHOTS}/8-moderation-chiffres.png`, fullPage: true });
+  await page.select("#report-status", "PENDING");
+  await waitText("#reports", "Aucun signalement en attente");
   check("bob notifié du traitement", await t.sql(`SELECT COUNT(*) FROM notifications WHERE user_id = ${bob.user.id} AND type = 'REPORT_UPDATE'`) === "2");
 
   // Utilisateurs : suspendre eve ; pas d'action sur l'admin ni sur soi

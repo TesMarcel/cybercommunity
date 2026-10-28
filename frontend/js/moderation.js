@@ -1,7 +1,7 @@
 // Modération : signalements, utilisateurs, catégories (admins)
 import { api } from "./api.js";
 import { isModerator, requireUser } from "./layout.js";
-import { busy, clear, el, formatDate, pagination, showEmpty, showLoading, showMessage } from "./ui.js";
+import { avatar, busy, clear, el, formatDate, pagination, showEmpty, showLoading, showMessage } from "./ui.js";
 
 const me = await requireUser("moderation");
 const message = document.getElementById("message");
@@ -34,6 +34,46 @@ async function act(button, action, reload) {
     // les boutons de formulaire qui restent en place
     done();
   }
+}
+
+// ---------- Chiffres clés ----------
+
+// Un clic sur un chiffre filtre la liste des signalements
+const STAT_CARDS = [
+  ["PENDING", "En attente"],
+  ["RESOLVED", "Résolus"],
+  ["REJECTED", "Rejetés"],
+];
+
+async function loadStats() {
+  const stats = document.getElementById("mod-stats");
+  const [counts, users] = await Promise.all([
+    Promise.all(STAT_CARDS.map(([status]) => api.get(`/api/reports?status=${status}&limit=1`).then((data) => data.total).catch(() => null))),
+    api.get("/api/users?limit=1").then((data) => data.total).catch(() => null),
+  ]);
+
+  const card = (label, value, onclick, alert = false, pressed = null) =>
+    el(
+      "li",
+      {},
+      el(
+        onclick ? "button" : "div",
+        { type: onclick ? "button" : null, class: `dash-stat${alert ? " dash-stat-alert" : ""}`, onclick, "aria-pressed": pressed },
+        el("strong", {}, value ?? "—"),
+        el("span", {}, label)
+      )
+    );
+
+  stats.replaceChildren(
+    ...STAT_CARDS.map(([status, label], index) =>
+      card(label, counts[index], () => {
+        statusFilter.value = status;
+        reportsPage = 1;
+        loadReports();
+      }, status === "PENDING" && counts[index] > 0, String(statusFilter.value === status))
+    ),
+    card("Membres", users, null)
+  );
 }
 
 // ---------- Signalements ----------
@@ -143,9 +183,10 @@ async function loadReports() {
     }
 
     clear(reportsList);
+    loadStats();
 
     if (data.reports.length === 0) {
-      showEmpty(reportsList, status === "PENDING" ? "Aucun signalement en attente. 👍" : "Aucun signalement.");
+      showEmpty(reportsList, status === "PENDING" ? "Aucun signalement en attente : tout est traité." : "Aucun signalement.");
     } else {
       reportsList.append(...data.reports.map(renderReport));
     }
@@ -207,6 +248,7 @@ function renderUser(user) {
   return el(
     "li",
     {},
+    avatar(user.username, "sm"),
     el("a", { href: `/pages/profile.html?id=${user.id}` }, user.username),
     el("span", { class: "tag" }, ROLES[user.role]),
     user.is_active ? null : el("span", { class: "tag tag-danger" }, "Suspendu"),

@@ -2,7 +2,7 @@
 import { api, session } from "./api.js";
 import { isModerator, requireUser } from "./layout.js";
 import { openReport } from "./report.js";
-import { busy, el, formatDate, params, showMessage } from "./ui.js";
+import { busy, el, formatDate, params, plural, showMessage, timeAgo } from "./ui.js";
 
 const me = await requireUser("profile");
 
@@ -13,6 +13,17 @@ const container = document.getElementById("profile");
 const message = document.getElementById("message");
 
 const ROLES = { USER: "Membre", MODERATOR: "Modérateur", ADMIN: "Administrateur" };
+
+// Onglets de mon profil ; l'onglet ouvert survit au rechargement des données
+const TABS = [
+  ["overview", "Aperçu"],
+  ["edit", "Modifier le profil"],
+  ["photo", "Photo"],
+  ["security", "Sécurité"],
+];
+let activeTab = "overview";
+
+const sinceFormat = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric" });
 
 function avatar(profile) {
   return profile.photo_url
@@ -29,6 +40,10 @@ function details(profile) {
     ["Compétences", profile.skills],
     ["Membre depuis", formatDate(profile.created_at)],
   ].filter(([, value]) => value);
+
+  if (rows.length === 0) {
+    return el("p", { class: "muted" }, "Aucune information.");
+  }
 
   return el("dl", { class: "details" }, rows.flatMap(([label, value]) => [el("dt", {}, label), el("dd", {}, value)]));
 }
@@ -105,6 +120,7 @@ function editForm(profile) {
 
     try {
       await api.put("/api/users/profile", body);
+      activeTab = "overview";
       await load();
       showMessage(message, "Profil enregistré.", "success");
     } catch (error) {
@@ -147,6 +163,7 @@ function photoForm() {
 
     try {
       await api.upload("/api/users/profile/photo", data);
+      activeTab = "overview";
       await load();
       showMessage(message, "Photo mise à jour.", "success");
     } catch (error) {
@@ -211,25 +228,77 @@ function passwordForm() {
 
 // ---------- Discussions du membre ----------
 
-async function postsOf(profile) {
-  const section = el("section", { class: "card" }, el("h2", {}, isMe ? "Mes discussions" : `Discussions de ${profile.username}`));
+function postsSection(profile, posts) {
+  const section = el(
+    "section",
+    { class: "card" },
+    el("div", { class: "card-head" }, el("h2", {}, isMe ? "Mes discussions" : `Discussions de ${profile.username}`))
+  );
 
-  try {
-    const data = await api.get(`/api/posts?author_id=${profile.id}&limit=10`);
-
-    if (data.posts.length === 0) {
-      section.append(el("p", { class: "muted" }, "Aucune discussion publiée."));
-    } else {
-      section.append(
-        el("ul", {}, data.posts.map((post) => el("li", {}, el("a", { href: `/pages/post.html?id=${post.id}` }, post.title), " ", el("span", { class: "muted small" }, formatDate(post.created_at))))),
-        data.total > data.posts.length ? el("p", { class: "muted small" }, `${data.total} discussions au total`) : null
-      );
-    }
-  } catch (error) {
-    section.append(el("p", { class: "muted" }, error.message));
+  if (!posts) {
+    section.append(el("p", { class: "muted" }, "Impossible de charger les discussions."));
+  } else if (posts.posts.length === 0) {
+    section.append(el("p", { class: "muted" }, "Aucune discussion publiée."));
+  } else {
+    section.append(
+      el(
+        "ul",
+        { class: "dash-list" },
+        posts.posts.map((post) =>
+          el(
+            "li",
+            { class: "dash-item" },
+            el("a", { class: "dash-item-title", href: `/pages/post.html?id=${post.id}` }, post.title),
+            el(
+              "div",
+              { class: "meta" },
+              post.category ? el("span", { class: "tag tag-accent" }, post.category) : null,
+              timeAgo(post.created_at),
+              el("span", {}, plural(post.comments, "commentaire", "commentaires"))
+            )
+          )
+        )
+      ),
+      posts.total > posts.posts.length ? el("p", { class: "muted small" }, `${posts.total} discussions au total`) : null
+    );
   }
 
   return section;
+}
+
+// ---------- Onglets ----------
+
+function tabs(panels) {
+  const list = el("div", { class: "tabs", role: "tablist", "aria-label": "Sections de mon profil" });
+
+  const select = (name, focus = false) => {
+    activeTab = name;
+    for (const [key] of TABS) {
+      const button = document.getElementById(`tab-${key}`);
+      button.setAttribute("aria-selected", String(key === name));
+      button.tabIndex = key === name ? 0 : -1;
+      panels[key].classList.toggle("hidden", key !== name);
+    }
+    if (focus) document.getElementById(`tab-${name}`).focus();
+  };
+
+  for (const [key, label] of TABS) {
+    const button = el("button", { type: "button", role: "tab", id: `tab-${key}`, "aria-controls": `panel-${key}` }, label);
+    button.addEventListener("click", () => select(key));
+    // Flèches gauche/droite entre les onglets (accessibilité clavier)
+    button.addEventListener("keydown", (event) => {
+      const offset = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (!offset) return;
+      const index = TABS.findIndex(([name]) => name === key);
+      select(TABS[(index + offset + TABS.length) % TABS.length][0], true);
+    });
+    list.append(button);
+    panels[key].setAttribute("role", "tabpanel");
+    panels[key].id = `panel-${key}`;
+    panels[key].setAttribute("aria-labelledby", `tab-${key}`);
+  }
+
+  return { list, select };
 }
 
 // ---------- Chargement ----------
@@ -244,7 +313,10 @@ async function load() {
     return showMessage(message, error.status === 404 || error.status === 400 ? "Ce membre n'existe pas." : error.message);
   }
 
-  const actions = el("div", { class: "row" });
+  const posts = await api.get(`/api/posts?author_id=${profile.id}&limit=5`).catch(() => null);
+  const skills = (profile.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean);
+
+  const actions = el("div", { class: "row profile-actions" });
 
   if (!isMe) {
     actions.append(el("button", { type: "button", class: "button-link", onclick: () => openReport("USER", profile.id) }, "Signaler ce membre"));
@@ -252,35 +324,64 @@ async function load() {
     if (moderation) actions.append(moderation);
   }
 
+  // En-tête : bannière, photo, nom, rôle, chiffres
   const head = el(
     "section",
-    { class: "card stack" },
+    { class: "card profile-hero" },
+    el("div", { class: "profile-cover", "aria-hidden": "true" }),
     el(
       "div",
-      { class: "profile-head" },
+      { class: "profile-identity" },
       avatar(profile),
       el(
         "div",
-        {},
+        { class: "profile-name" },
         el("h1", {}, profile.username),
-        el("span", { class: "tag" }, ROLES[profile.role] ?? profile.role),
-        profile.is_active === false ? el("span", { class: "tag tag-danger" }, "Suspendu") : null
-      )
+        el(
+          "div",
+          { class: "row" },
+          el("span", { class: "tag tag-accent" }, ROLES[profile.role] ?? profile.role),
+          profile.is_active === false ? el("span", { class: "tag tag-danger" }, "Suspendu") : null,
+          profile.pseudonym ? el("span", { class: "muted small" }, profile.pseudonym) : null,
+          profile.country ? el("span", { class: "muted small" }, profile.country) : null
+        )
+      ),
+      actions
     ),
-    profile.biography ? el("p", { class: "content" }, profile.biography) : null,
-    details(profile),
-    actions
+    el(
+      "ul",
+      { class: "profile-stats", "aria-label": "En bref" },
+      el("li", {}, el("strong", {}, posts ? posts.total : "—"), el("span", {}, "discussions")),
+      el("li", {}, el("strong", {}, skills.length), el("span", {}, "compétences")),
+      el("li", {}, el("strong", {}, sinceFormat.format(new Date(profile.created_at))), el("span", {}, "membre depuis"))
+    )
   );
 
-  const parts = [head];
+  const about = el(
+    "section",
+    { class: "card" },
+    el("div", { class: "card-head" }, el("h2", {}, "À propos")),
+    profile.biography ? el("p", { class: "content" }, profile.biography) : el("p", { class: "muted" }, isMe ? "Ajoutez une biographie dans « Modifier le profil »." : "Pas encore de biographie."),
+    skills.length ? el("ul", { class: "skill-list", "aria-label": "Compétences" }, skills.map((skill) => el("li", { class: "tag" }, skill))) : null,
+    details(profile)
+  );
 
-  if (isMe) {
-    parts.push(editForm(profile), photoForm(), passwordForm());
+  const overview = el("div", { class: "profile-grid" }, about, postsSection(profile, posts));
+
+  if (!isMe) {
+    container.replaceChildren(head, overview);
+  } else {
+    const panels = {
+      overview,
+      edit: el("div", {}, editForm(profile)),
+      photo: el("div", {}, photoForm()),
+      security: el("div", {}, passwordForm()),
+    };
+    const { list, select } = tabs(panels);
+    container.replaceChildren(head, list, ...Object.values(panels));
+    select(activeTab);
   }
 
-  parts.push(await postsOf(profile));
-
-  container.replaceChildren(...parts);
   document.title = `${profile.username} — Cyber Community`;
 }
 

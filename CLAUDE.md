@@ -15,15 +15,14 @@ Répondre et documenter **en français**.
 
 ## Direction artistique
 
-Identité : **terminal sobre, outil pour praticiens**. Lisible, dense sans être chargé, crédible pour un public technique.
+Identité : **terminal sobre, outil pour praticiens**, avec une finition « vitrine » inspirée de safinum.cm (validée par l'utilisateur le 2026-10-28). Lisible, dense sans être chargé, crédible pour un public technique.
 
-- Fond sombre neutre, une seule couleur d'accent (vert terminal `--accent`), bleu réservé aux liens/focus, rouge/orange réservés aux états (danger, avertissement).
-- Monospace (`--mono`) pour la marque, les métadonnées techniques, les tags, le code ; sans-serif système (`--font`) pour le texte courant.
-- Hiérarchie par la taille, la graisse et l'espacement, pas par la couleur ou la décoration.
-- **Interdits** : dégradés violets/néon, glassmorphism, `backdrop-filter`, cartes très arrondies empilées partout, ombres colorées, effets « glow » gratuits, emojis décoratifs, illustrations génériques. Pas de style « landing page IA ».
-- Rayons faibles (≤ 8 px), bordures fines plutôt qu'ombres pour séparer les surfaces.
-
-**Exception : la page d'accueil publique** (`frontend/index.html`, classe `body.landing`, section « Page d'accueil » de `main.css`), validée par l'utilisateur le 2026-10-28, adopte un style vitrine inspiré de safinum.cm : thème clair (variables redéfinies sur `.landing`), titres en Poppins (servie depuis `frontend/fonts/`, licence OFL), grille fine en fond, boutons arrondis, cartes à `--radius-lg`, pied de page sombre. Elle garde l'accent vert unique, sans dégradé coloré, ombre ni emoji. Les pages de l'application suivent toujours les règles ci-dessus jusqu'à la tâche 10 (alignement + mode clair/sombre).
+- **Deux thèmes**, sombre et clair, définis uniquement par les variables de `:root` (sombre) et `:root[data-theme="light"]` + `@media (prefers-color-scheme: light)` (clair ; ces deux blocs doivent rester identiques). Sans choix enregistré, le site suit le système ; le bouton `.theme-toggle` (`themeToggle()` de `js/ui.js`) mémorise le choix (`localStorage` `cc-theme`), appliqué avant affichage par `js/theme.js` (script classique dans `<head>` de chaque page).
+- Une seule couleur d'accent (vert `--accent`), bleu réservé aux liens/focus, rouge/orange réservés aux états (danger, avertissement). Vérifier le contraste AA **dans les deux thèmes**.
+- Titres (`h1`–`h3`) en Poppins (`--font-display`, servie depuis `frontend/fonts/`, licence OFL) ; monospace (`--mono`) pour la marque, les métadonnées techniques, les tags, les sur-titres ; sans-serif système (`--font`) pour le texte courant.
+- Boutons en pastille (rayon 999px), cartes à `--radius-lg`, champs et petits éléments à `--radius` ; bordures fines plutôt qu'ombres.
+- Pages de l'application compactes (pas de grands titres vitrine) ; le style vitrine complet (grille en fond, grand titre, sections, pied de page sombre) est réservé à l'accueil (`body.landing`).
+- **Interdits** : dégradés colorés/néon, glassmorphism, `backdrop-filter`, ombres colorées, effets « glow », emojis décoratifs, illustrations génériques.
 
 ## Design system (`frontend/css/main.css`)
 
@@ -32,10 +31,12 @@ Toutes les valeurs passent par les variables de `:root`. Pas de couleur, taille 
 | Famille | Variables |
 |---|---|
 | Couleurs | `--bg`, `--surface`, `--surface-2`, `--border`, `--text`, `--muted`, `--accent`, `--accent-hover`, `--link`, `--danger`, `--warning` |
-| Typo | `--font`, `--mono` (échelle `rem` : 0.875 / 1 / 1.25 / 1.6) |
-| Rayon | `--radius` |
+| Typo | `--font`, `--font-display`, `--mono` (échelle `rem` : 0.875 / 1 / 1.25 / 1.6) |
+| Rayon | `--radius`, `--radius-lg` |
+| États / fonds | `--on-color`, `--input-border`, `--error-bg`, `--success-bg`, `--highlight-bg`, `--backdrop`, `--grid-line` |
+| Mouvement | `--duration`, `--ease` |
 
-À introduire au besoin, en complétant `:root` plutôt qu'en dupliquant : `--space-1…6` (échelle 4 px), `--shadow-1/2` (profondeur : fond → surface → surface-2 → dialog), `--duration`, `--ease`.
+À introduire au besoin, en complétant `:root` plutôt qu'en dupliquant : `--space-1…6` (échelle 4 px), `--shadow-1/2` (profondeur : fond → surface → surface-2 → dialog).
 
 - **Réutiliser** les classes existantes avant d'en créer : `.card`, `.stack`, `.row`, `.page-title`, `.field`, `.hint`, `.button` / `.button-primary` / `.button-danger` / `.button-link` / `.button-small`, `.alert-error` / `.alert-success`, `.loading`, `.empty`, `.tag`, `.meta`, `.badge`, `.pagination`, `.sr-only`, `.hidden`.
 - Garder la structure du fichier par sections commentées (`/* ---------- Section ---------- */`) ; ajouter une section par composant/page.

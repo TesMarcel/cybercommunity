@@ -98,6 +98,59 @@ export function pagination(container, { page, limit, total }, onChange) {
   );
 }
 
+// Bouton clair / sombre (le thème initial est posé par js/theme.js)
+const THEME_ICONS = {
+  // Soleil : affiché en mode sombre, propose le mode clair
+  light: "M12 3v2M12 19v2M5 5l1.4 1.4M17.6 17.6 19 19M3 12h2M19 12h2M5 19l1.4-1.4M17.6 6.4 19 5M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
+  // Lune : affichée en mode clair, propose le mode sombre
+  dark: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
+};
+
+function currentTheme() {
+  const chosen = document.documentElement.dataset.theme;
+
+  if (chosen) {
+    return chosen;
+  }
+
+  return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+export function themeToggle() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  svg.append(path);
+
+  const button = el("button", { type: "button", class: "theme-toggle" }, svg);
+
+  const render = () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    const label = next === "light" ? "Passer en mode clair" : "Passer en mode sombre";
+    path.setAttribute("d", THEME_ICONS[next]);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  };
+
+  button.addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+
+    try {
+      localStorage.setItem("cc-theme", next);
+    } catch {
+      // Choix valable pour cette page seulement
+    }
+
+    render();
+  });
+
+  render();
+  return button;
+}
+
 export const params = new URLSearchParams(location.search);
 
 export function plural(count, singular, pluralForm) {

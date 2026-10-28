@@ -1,6 +1,8 @@
 // Connexion et inscription
 import { api, session } from "./api.js";
-import { busy, params, showMessage } from "./ui.js";
+import { busy, params, showMessage, themeToggle } from "./ui.js";
+
+document.querySelector(".site-header .inner").append(themeToggle());
 
 const message = document.getElementById("message");
 

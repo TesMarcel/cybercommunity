@@ -16,14 +16,69 @@
   --danger: #f85149;
   --warning: #d29922;
   --on-color: #0d1117; /* texte sur fond --accent ou --danger (contraste AA) */
-  --radius: 8px;
+  --input-border: #6e7681; /* contour des champs : 3:1 minimum sur le fond */
+  --error-bg: rgba(248, 81, 73, 0.1);
+  --success-bg: rgba(46, 160, 67, 0.12);
+  --highlight-bg: rgba(210, 153, 34, 0.08);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+  --radius: 10px;
   --radius-lg: 14px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Poppins", var(--font);
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --grid-line: rgba(127, 127, 127, 0.12);
+  --grid-line: rgba(230, 237, 243, 0.05);
   --duration: 160ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Thème clair : choisi par le membre (data-theme, posé par js/theme.js)
+   ou, sans choix enregistré, réglage clair du système.
+   Les deux blocs doivent rester identiques. */
+:root[data-theme="light"] {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f4;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #1a7f37;
+  --accent-hover: #116329;
+  --link: #0969da;
+  --danger: #cf222e;
+  --warning: #9a6700;
+  --on-color: #ffffff;
+  --input-border: #818b98;
+  --error-bg: rgba(207, 34, 46, 0.08);
+  --success-bg: rgba(26, 127, 55, 0.1);
+  --highlight-bg: rgba(154, 103, 0, 0.1);
+  --backdrop: rgba(31, 35, 40, 0.5);
+  --grid-line: rgba(31, 35, 40, 0.06);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f4;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #59636e;
+    --accent: #1a7f37;
+    --accent-hover: #116329;
+    --link: #0969da;
+    --danger: #cf222e;
+    --warning: #9a6700;
+    --on-color: #ffffff;
+    --input-border: #818b98;
+    --error-bg: rgba(207, 34, 46, 0.08);
+    --success-bg: rgba(26, 127, 55, 0.1);
+    --highlight-bg: rgba(154, 103, 0, 0.1);
+    --backdrop: rgba(31, 35, 40, 0.5);
+    --grid-line: rgba(31, 35, 40, 0.06);
+    color-scheme: light;
+  }
 }
 
 /* Poppins (licence OFL, fonts/OFL-Poppins.txt) : titres de la page d'accueil */
@@ -77,11 +132,15 @@ a:hover {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
   line-height: 1.25;
   margin: 0 0 0.75rem;
 }
 
 h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
   font-size: 1.6rem;
 }
 
@@ -122,6 +181,9 @@ p {
 /* ---------- En-tête ---------- */
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -189,6 +251,25 @@ p {
   text-align: center;
 }
 
+/* Bouton clair / sombre (js/ui.js, themeToggle) */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+}
+
+.theme-toggle .icon {
+  width: 18px;
+  height: 18px;
+}
+
 /* ---------- Mise en page ---------- */
 
 main {
@@ -220,7 +301,7 @@ main {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: 1rem;
   margin-bottom: 1rem;
 }
@@ -271,7 +352,7 @@ select,
 textarea {
   width: 100%;
   padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
@@ -310,7 +391,7 @@ input[type="file"]::file-selector-button {
   margin-right: 0.75rem;
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
@@ -330,9 +411,9 @@ button,
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 1rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
@@ -403,12 +484,12 @@ button:disabled {
 
 .alert-error {
   border-color: var(--danger);
-  background: rgba(248, 81, 73, 0.1);
+  background: var(--error-bg);
 }
 
 .alert-success {
   border-color: var(--accent);
-  background: rgba(46, 160, 67, 0.12);
+  background: var(--success-bg);
 }
 
 .empty,
@@ -429,7 +510,7 @@ button:disabled {
 .post-item {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: 0.9rem 1rem;
   margin-bottom: 0.6rem;
 }
@@ -507,7 +588,7 @@ button:disabled {
 
 .comment.highlight {
   border-left-color: var(--warning);
-  background: rgba(210, 153, 34, 0.08);
+  background: var(--highlight-bg);
 }
 
 .comment .comments {
@@ -536,14 +617,14 @@ button:disabled {
 dialog {
   width: min(480px, calc(100% - 2rem));
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text);
   padding: 1.25rem;
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--backdrop);
 }
 
 /* ---------- Mobile ---------- */
@@ -559,6 +640,22 @@ dialog::backdrop {
 
   .site-header .inner {
     padding: 0.6rem 0.75rem;
+  }
+
+  /* En-tête de l'application sur trois lignes : trop haut pour rester fixé */
+  body:not(.landing) .site-header {
+    position: static;
+  }
+
+  /* Logo et bouton de thème sur la première ligne, navigation dessous */
+  .theme-toggle {
+    order: 1;
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav {
+    order: 2;
   }
 
   .nav {
@@ -738,21 +835,6 @@ input[type="checkbox"].checkbox {
 
 /* ---------- Page d'accueil (index.html) ---------- */
 
-/* Thème clair propre à l'accueil : les composants communs suivent les variables */
-.landing {
-  --bg: #f6f8fa;
-  --surface: #ffffff;
-  --surface-2: #eef1f4;
-  --border: #d8dee4;
-  --text: #1f2328;
-  --muted: #59636e;
-  --accent: #1a7f37;
-  --accent-hover: #116329;
-  --link: #0969da;
-  --on-color: #ffffff;
-  --grid-line: rgba(31, 35, 40, 0.06);
-}
-
 .skip-link {
   position: absolute;
   left: 1rem;
@@ -766,12 +848,6 @@ input[type="checkbox"].checkbox {
 
 .skip-link:focus {
   top: 0.5rem;
-}
-
-.landing .site-header {
-  position: sticky;
-  top: 0;
-  z-index: 5;
 }
 
 .landing .site-header .inner {

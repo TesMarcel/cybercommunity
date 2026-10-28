@@ -1,6 +1,6 @@
 // En-tête commun : navigation, badge de notifications, déconnexion
 import { api, session, goToLogin } from "./api.js";
-import { el } from "./ui.js";
+import { el, themeToggle } from "./ui.js";
 
 const LINKS = [
   ["forum", "/pages/forum.html", "Forum"],
@@ -74,7 +74,8 @@ function renderHeader(user, active) {
 
   header.replaceChildren(
     el("a", { class: "brand", href: "/pages/forum.html" }, "> cyber_community"),
-    el("nav", { class: "nav", "aria-label": "Navigation principale" }, links)
+    el("nav", { class: "nav", "aria-label": "Navigation principale" }, links),
+    themeToggle()
   );
 
   refreshBadge();

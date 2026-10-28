@@ -105,6 +105,20 @@ export default async function (t) {
   await waitText("#posts", "Titre corrigé");
   check("liste : discussion présente avec compteurs", (await text("#posts .meta"))?.includes("2 commentaires"), await text("#posts .meta"));
 
+  // Thème : le bouton bascule, le choix survit au rechargement
+  const theme = () => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+  const before = await theme();
+  await page.click(".theme-toggle");
+  const after = await theme();
+  check("thème : le bouton bascule clair/sombre", before !== after, `${before} → ${after}`);
+  await page.screenshot({ path: `${t.SHOTS}/1-forum-${after}.png` });
+  await page.reload();
+  await waitText("#posts", "Titre corrigé");
+  check("thème : choix conservé après rechargement", (await theme()) === after);
+  await page.click(".theme-toggle");
+  check("thème : retour au thème initial", (await theme()) === before);
+  await page.screenshot({ path: `${t.SHOTS}/1-forum-${before}.png` });
+
   await page.type("#q", "introuvable-xyz");
   await page.click("#filters button");
   await waitText("#posts", "Aucune discussion ne correspond");
